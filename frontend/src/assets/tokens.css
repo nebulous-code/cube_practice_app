@@ -1,0 +1,66 @@
+/*
+ * Design tokens — paper aesthetic, ported from initial_design/src/ui.jsx.
+ * Reference these custom properties everywhere; avoid hard-coding palette/font values.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Paper palette */
+  --paper-bg: #F4EFE3;
+  --paper-bg-alt: #EDE6D4;
+  --paper-card: #FBF7ED;
+  --paper-ink: #1F1B16;
+  --paper-ink-muted: #6E6455;
+  --paper-ink-faint: #9C907C;
+  --paper-rule: #D9CEB7;
+  --paper-rule-faint: #E5DCC8;
+  --paper-accent: #8C5A2B;
+  --paper-accent-bg: #E8DCC4;
+  --paper-yellow: #E9B949;
+  --paper-error: #B84A3F;
+
+  /* Type stacks */
+  --font-serif: 'Newsreader', 'Georgia', serif;
+  --font-sans: 'Inter Tight', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--paper-bg);
+  color: var(--paper-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+}
