@@ -45,10 +45,32 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
+  /// Verify a 6-digit code. Email is required for the unauthenticated
+  /// (initial registration) path; ignored when an authed session is in play.
+  async function verifyEmail(code: string, email?: string | null): Promise<User> {
+    const body: { code: string; email?: string } = { code }
+    if (email) body.email = email
+
+    const response = await api.post<User>('/auth/verify-email', body)
+    user.value = response.data
+    status.value = 'authed'
+    pendingVerificationEmail.value = null
+    return response.data
+  }
+
+  /// Resend a verification code. Email is required when no session exists.
+  async function resendVerification(email?: string | null): Promise<void> {
+    const body: { email?: string } = {}
+    if (email) body.email = email
+    await api.post('/auth/resend-verification', body)
+  }
+
   return {
     user,
     status,
     pendingVerificationEmail,
     register,
+    verifyEmail,
+    resendVerification,
   }
 })

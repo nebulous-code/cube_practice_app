@@ -30,7 +30,7 @@ Things that need a human decision, content, design, or external action — items
 
 - [ ] **Neon Postgres database** provisioned, connection string captured in `DATABASE_URL`.
 - [ ] **Render frontend + backend services** created, env vars wired up per `Cube_Practice_Design_Doc.md` §10.
-- [ ] **Custom domain** (post-MVP per the spec — listed here for visibility).
+- [ ] **Custom domains on Render** — `cube.nebulouscode.com` and `api.cube.nebulouscode.com`. Walkthrough in `docs/render_custom_domains.md`. Required before the verify-email / login slice ships, because the `SameSite=Strict` session cookie won't travel across `*.onrender.com` (different registrable domains per the public suffix list).
 
 ---
 

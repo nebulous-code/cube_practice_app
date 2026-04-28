@@ -3,20 +3,33 @@
 use std::collections::HashMap;
 
 use axum::{extract::State, routing::post, Json, Router};
-use chrono::{Duration, Utc};
+use axum_extra::extract::cookie::CookieJar;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::{code::six_digit_code, password::hash_password};
-use crate::email::{verification, ResendClient};
+use crate::auth::{
+    code::six_digit_code,
+    extractor::AuthUser,
+    password::hash_password,
+    session::create_session,
+};
+use crate::email::{email_change_verification, verification, ResendClient};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
 const VERIFICATION_TTL_MINUTES: i64 = 10;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/auth/register", post(register))
+    Router::new()
+        .route("/auth/register", post(register))
+        .route("/auth/verify-email", post(verify_email))
+        .route("/auth/resend-verification", post(resend_verification))
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/register
+// ─────────────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterRequest {
@@ -84,13 +97,312 @@ async fn register(
     }))
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/verify-email
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyEmailRequest {
+    code: String,
+    /// Required for the unauthenticated (initial registration) flow.
+    /// Ignored when the request carries a valid session.
+    #[serde(default)]
+    email: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VerifyEmailResponse {
+    id: Uuid,
+    email: String,
+    display_name: String,
+    email_verified: bool,
+}
+
+async fn verify_email(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    auth_user: Option<AuthUser>,
+    Json(req): Json<VerifyEmailRequest>,
+) -> AppResult<(CookieJar, Json<VerifyEmailResponse>)> {
+    let code = req.code.trim().to_string();
+    if code.len() != 6 || !code.chars().all(|c| c.is_ascii_digit()) {
+        return Err(AppError::InvalidCode);
+    }
+
+    if let Some(user) = auth_user {
+        // Authenticated mode: promote pending_email.
+        let resp = verify_email_change(&state, user.user_id, &code).await?;
+        Ok((jar, Json(resp)))
+    } else {
+        // Unauthenticated mode: initial verification, also signs the user in.
+        let email = req
+            .email
+            .as_deref()
+            .map(|e| e.trim().to_lowercase())
+            .filter(|e| !e.is_empty())
+            .ok_or_else(|| {
+                let mut fields = HashMap::new();
+                fields.insert("email".into(), "Required.".into());
+                AppError::Validation(fields)
+            })?;
+
+        let resp = verify_initial(&state, &email, &code).await?;
+        let session = create_session(&state.pool, resp.id, &state.config.jwt_secret).await?;
+        Ok((jar.add(session.cookie), Json(resp)))
+    }
+}
+
+/// Initial verification. Returns user + sets `email_verified=true`. Caller is
+/// expected to attach a session cookie on success.
+async fn verify_initial(
+    state: &AppState,
+    email: &str,
+    code: &str,
+) -> AppResult<VerifyEmailResponse> {
+    let row: Option<(Uuid, String, String, Option<String>, Option<DateTime<Utc>>, bool)> =
+        sqlx::query_as(
+            r#"
+            SELECT id, email, display_name, verification_code, verification_code_expires, email_verified
+            FROM users
+            WHERE email = $1
+            "#,
+        )
+        .bind(email)
+        .fetch_optional(&state.pool)
+        .await?;
+
+    let (id, db_email, display_name, stored_code, expires, already_verified) =
+        row.ok_or(AppError::InvalidCode)?;
+
+    // Already-verified users: idempotent success on the right code; reject otherwise.
+    if already_verified {
+        return match stored_code {
+            Some(stored) if stored == code => Ok(VerifyEmailResponse {
+                id,
+                email: db_email,
+                display_name,
+                email_verified: true,
+            }),
+            _ => Err(AppError::InvalidCode),
+        };
+    }
+
+    let stored = stored_code.ok_or(AppError::InvalidCode)?;
+    let expires = expires.ok_or(AppError::InvalidCode)?;
+    if stored != code {
+        return Err(AppError::InvalidCode);
+    }
+    if expires <= Utc::now() {
+        return Err(AppError::CodeExpired);
+    }
+
+    sqlx::query(
+        r#"
+        UPDATE users
+        SET email_verified = TRUE,
+            verification_code = NULL,
+            verification_code_expires = NULL
+        WHERE id = $1
+        "#,
+    )
+    .bind(id)
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!(user_id = %id, "verified email — initial registration");
+
+    Ok(VerifyEmailResponse {
+        id,
+        email: db_email,
+        display_name,
+        email_verified: true,
+    })
+}
+
+/// Email-change verification. Promotes `pending_email` into `email`.
+async fn verify_email_change(
+    state: &AppState,
+    user_id: Uuid,
+    code: &str,
+) -> AppResult<VerifyEmailResponse> {
+    let row: Option<(Uuid, String, String, Option<String>, Option<String>, Option<DateTime<Utc>>, bool)> =
+        sqlx::query_as(
+            r#"
+            SELECT id, email, display_name, pending_email, verification_code, verification_code_expires, email_verified
+            FROM users
+            WHERE id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(&state.pool)
+        .await?;
+
+    let (id, _email, display_name, pending, stored_code, expires, email_verified) =
+        row.ok_or(AppError::Unauthorized)?;
+    let pending = pending.ok_or(AppError::NoPendingVerification)?;
+    let stored = stored_code.ok_or(AppError::InvalidCode)?;
+    let expires = expires.ok_or(AppError::InvalidCode)?;
+    if stored != code {
+        return Err(AppError::InvalidCode);
+    }
+    if expires <= Utc::now() {
+        return Err(AppError::CodeExpired);
+    }
+
+    let result: Result<(), sqlx::Error> = sqlx::query(
+        r#"
+        UPDATE users
+        SET email = $2,
+            pending_email = NULL,
+            verification_code = NULL,
+            verification_code_expires = NULL,
+            email_verified = TRUE
+        WHERE id = $1
+        "#,
+    )
+    .bind(id)
+    .bind(&pending)
+    .execute(&state.pool)
+    .await
+    .map(|_| ());
+
+    match result {
+        Ok(()) => Ok(VerifyEmailResponse {
+            id,
+            email: pending,
+            display_name,
+            email_verified: true,
+        }),
+        // Race: someone else registered the pending address first.
+        Err(e) if is_unique_violation(&e) => Err(AppError::EmailInUse),
+        Err(e) => Err(e.into()),
+    }
+    .map(|resp| {
+        let _ = email_verified; // currently unused; will be relevant when email-change banner state surfaces
+        resp
+    })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/resend-verification
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ResendVerificationRequest {
+    /// Required for the unauthenticated path. Ignored when authenticated.
+    #[serde(default)]
+    email: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct EmptyResponse {}
+
+async fn resend_verification(
+    State(state): State<AppState>,
+    auth_user: Option<AuthUser>,
+    Json(req): Json<ResendVerificationRequest>,
+) -> AppResult<Json<EmptyResponse>> {
+    // TODO: rate-limit 1/min per user once B9 lands.
+
+    if let Some(user) = auth_user {
+        resend_for_user(&state, user.user_id).await?;
+    } else {
+        let email = req
+            .email
+            .as_deref()
+            .map(|e| e.trim().to_lowercase())
+            .filter(|e| !e.is_empty())
+            .ok_or_else(|| {
+                let mut fields = HashMap::new();
+                fields.insert("email".into(), "Required.".into());
+                AppError::Validation(fields)
+            })?;
+        resend_for_email(&state, &email).await?;
+    }
+
+    Ok(Json(EmptyResponse {}))
+}
+
+async fn resend_for_email(state: &AppState, email: &str) -> AppResult<()> {
+    let row: Option<(Uuid, Option<String>, bool)> = sqlx::query_as(
+        "SELECT id, pending_email, email_verified FROM users WHERE email = $1",
+    )
+    .bind(email)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let Some((id, _pending, verified)) = row else {
+        // Don't reveal whether the email is registered.
+        return Ok(());
+    };
+    if verified {
+        // Already verified initial registration; nothing to resend at the unauth path.
+        return Ok(());
+    }
+
+    let code = issue_new_code(&state.pool, id).await?;
+    send_verification_email(&state.email, email, &code).await
+}
+
+async fn resend_for_user(state: &AppState, user_id: Uuid) -> AppResult<()> {
+    let row: Option<(String, Option<String>, bool)> = sqlx::query_as(
+        "SELECT email, pending_email, email_verified FROM users WHERE id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let (email, pending, verified) = row.ok_or(AppError::Unauthorized)?;
+    let code = issue_new_code(&state.pool, user_id).await?;
+
+    if let Some(pending_email) = pending {
+        // Email-change flow: send to the *new* (pending) address.
+        let msg = email_change_verification(&code, &pending_email);
+        state
+            .email
+            .send(&pending_email, &msg.subject, &msg.text, &msg.html)
+            .await
+    } else if !verified {
+        // Initial registration but the user is already authed (rare but possible during edge flows).
+        send_verification_email(&state.email, &email, &code).await
+    } else {
+        // Authed user, no pending change, already verified — nothing to do.
+        Ok(())
+    }
+}
+
+async fn issue_new_code(pool: &sqlx::PgPool, user_id: Uuid) -> AppResult<String> {
+    let code = six_digit_code();
+    let expires = Utc::now() + Duration::minutes(VERIFICATION_TTL_MINUTES);
+    sqlx::query(
+        r#"
+        UPDATE users
+        SET verification_code = $2, verification_code_expires = $3
+        WHERE id = $1
+        "#,
+    )
+    .bind(user_id)
+    .bind(&code)
+    .bind(expires)
+    .execute(pool)
+    .await?;
+    Ok(code)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
 fn validate_register(display_name: &str, email: &str, password: &str) -> AppResult<()> {
     let mut fields: HashMap<String, String> = HashMap::new();
 
     if display_name.is_empty() {
         fields.insert("display_name".into(), "Required.".into());
     } else if display_name.chars().count() > 80 {
-        fields.insert("display_name".into(), "Must be 80 characters or fewer.".into());
+        fields.insert(
+            "display_name".into(),
+            "Must be 80 characters or fewer.".into(),
+        );
     }
 
     if !is_email_shape(email) {
@@ -163,7 +475,15 @@ mod tests {
 
     #[test]
     fn email_shape_rejects_obvious_garbage() {
-        for bad in ["", "no-at", "@nope.com", "trailing@", "two@@signs.com", "spa ce@x.com", "noTLD@x"] {
+        for bad in [
+            "",
+            "no-at",
+            "@nope.com",
+            "trailing@",
+            "two@@signs.com",
+            "spa ce@x.com",
+            "noTLD@x",
+        ] {
             assert!(!is_email_shape(bad), "{bad} should be rejected");
         }
     }
