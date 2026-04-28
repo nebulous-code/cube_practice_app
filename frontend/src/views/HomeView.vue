@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Placeholder dashboard for milestone 1.
-// Real content arrives in milestone 2 onward.
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 </script>
 
 <template>
@@ -9,9 +10,13 @@
       <p class="eyebrow">Milestone 1</p>
       <h1>Cube Practice — scaffolding</h1>
       <p class="body">
-        Auth and user account flows ship in this milestone. The practice/cases/progress views
-        come online in later milestones.
+        Auth flows are landing this milestone. Practice, cases, and progress views come online
+        in milestones 2&ndash;4.
       </p>
+      <div class="actions">
+        <button class="link" type="button" @click="router.push('/register')">Create an account →</button>
+        <button class="link muted" type="button" @click="router.push('/login')">Sign in</button>
+      </div>
     </div>
   </main>
 </template>
@@ -56,6 +61,29 @@ h1 {
   font-style: italic;
   color: var(--paper-ink-muted);
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 var(--space-6);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--paper-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link.muted {
+  color: var(--paper-ink-muted);
 }
 </style>

@@ -6,6 +6,10 @@ pub struct Config {
     pub frontend_url: String,
     pub database_url: Option<String>,
     pub jwt_secret: String,
+    pub resend_api_key: String,
+    pub email_from: String,
+    pub recaptcha_secret_key: String,
+    pub recaptcha_min_score: f32,
 }
 
 impl Config {
@@ -22,6 +26,14 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:5173".to_string()),
             database_url: env::var("DATABASE_URL").ok(),
             jwt_secret,
+            resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
+            email_from: env::var("EMAIL_FROM")
+                .unwrap_or_else(|_| "Cube Practice <onboarding@resend.dev>".to_string()),
+            recaptcha_secret_key: env::var("RECAPTCHA_SECRET_KEY").unwrap_or_default(),
+            recaptcha_min_score: env::var("RECAPTCHA_MIN_SCORE")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0.5),
         })
     }
 }
