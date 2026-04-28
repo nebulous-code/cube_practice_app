@@ -31,7 +31,7 @@ function reviewsToday(progress) {
   return n;
 }
 
-function HomeScreen({ progress, onStartPractice, onBrowse, onOpenStats }) {
+function HomeScreen({ progress, onStartPractice, onBrowse, onOpenStats, user, onOpenSettings }) {
   const summary = summarizeProgress(progress, OLL_CASES);
   const weakCount = summary.counts.F + summary.counts.D + summary.counts.C;
   const dueCount = Math.max(weakCount, 8);
@@ -51,7 +51,22 @@ function HomeScreen({ progress, onStartPractice, onBrowse, onOpenStats }) {
       color: paper.ink, paddingBottom: 90,
     }}>
       {/* Masthead */}
-      <div style={{ padding: '56px 22px 12px' }}>
+      <div style={{ padding: '56px 22px 12px', position: 'relative' }}>
+        <button onClick={onOpenSettings} style={{
+          position: 'absolute', top: 56, right: 22,
+          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          {!user && (
+            <span style={{
+              fontFamily: fonts.sans, fontSize: 10, letterSpacing: 1.2,
+              textTransform: 'uppercase', color: paper.accent, fontWeight: 600,
+            }}>
+              Sign up
+            </span>
+          )}
+          <Avatar name={user?.name} size={38} />
+        </button>
         <Eyebrow style={{ marginBottom: 10 }}>{dateStr}</Eyebrow>
         <div style={{
           fontFamily: fonts.serif, fontSize: 42, lineHeight: 1.02,

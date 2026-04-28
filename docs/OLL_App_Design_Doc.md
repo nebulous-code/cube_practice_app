@@ -3,28 +3,29 @@
 ## 1. Product Scope
 
 ### What It Is
-A web-based spaced repetition flashcard app for Rubik's cube algorithm practice. Modeled on Anki's core study loop but purpose-built for OLL (and future solve stages). Users study cases, grade themselves 0–5, and the app uses the SM-2 algorithm to schedule future reviews.
+A web-based spaced repetition flashcard app for Rubik's cube algorithm practice. Modeled on Anki's core study loop but purpose-built for OLL (and future solve stages). Users study cases, grade themselves with a 4-button rating (Fail / Hard / Good / Easy), and an Anki-style modified SM-2 algorithm schedules future reviews. See `docs/sm2_vs_anki_summary.md` for why the Anki variant rather than canonical SM-2.
 
 ### MVP Features
 - Email/password registration with email verification and reCAPTCHA
 - Full login, logout, and password reset flow
-- Study mode: due cards per SM-2 schedule
+- Study mode: all due cards per the schedule
 - Free study mode: browse and practice any case regardless of schedule
 - Filter study by Tier 1 tag, Tier 2 tag, user-defined tags, or progress state
-- 0–5 grading per review, SM-2 calculates next interval
-- OLL diagrams rendered as SVG (proven spec, 57 images rotated as needed)
-- Per-user overrides for algorithm, result mapping (case + rotation), and nickname
+- 4-button grading per review (Fail / Hard / Good / Easy), Anki-style SM-2 calculates next interval
+- OLL diagrams rendered dynamically from a 9-character pattern string per case
+- Per-user overrides for algorithm, result mapping (case + rotation), nickname, and Tier 2 tag
 - User-defined free-form tags per case
 - Progress dashboard: due today, learning, mastered, not started
-- Mobile-friendly web app (no App Store deployment)
+- Daily study streak tracking
+- Mobile-friendly web app (mobile-shaped layout on desktop is acceptable for MVP)
 
 ### Post-MVP
 - PLL, F2L, and other solve stage expansion
 - Other cube types (4x4, Megaminx, etc.)
-- Stats over time and progress graphs
+- Stats over time and progress graphs (a placeholder/skeleton view ships in MVP so users know it's coming)
 - Admin panel
-- Study streak tracking
 - Public case browser (no login required)
+- Dark mode
 
 ### Out of Scope (MVP)
 - Native mobile app
@@ -67,8 +68,8 @@ case_number      INT NOT NULL     -- e.g. 1–57 for OLL
 nickname         TEXT             -- default nickname (e.g. "Sune")
 algorithm        TEXT NOT NULL    -- default algorithm string
 result_case_id   UUID REFERENCES cases(id)   -- which case appears on the back
-result_rotation  TEXT             -- NULL, "cw", "180", "ccw"
-diagram_data     JSONB            -- the LXR/TXB grid notation
+result_rotation  INT NOT NULL DEFAULT 0       -- 0=none, 1=cw, 2=180, 3=ccw (quarter-turns CW)
+diagram_data     JSONB NOT NULL    -- 9-character pattern string used by the dynamic renderer (see §9)
 tier1_tag        TEXT NOT NULL    -- "+", "-", "L", "*" — fixed, geometric
 tier2_tag        TEXT             -- "T_shapes", "knight_move", etc. — global default
 created_at       TIMESTAMPTZ
@@ -85,6 +86,8 @@ email_verified      BOOLEAN DEFAULT FALSE
 verification_token  TEXT
 reset_token         TEXT
 reset_token_expires TIMESTAMPTZ
+streak_count        INT NOT NULL DEFAULT 0   -- consecutive practice days; updated on each review
+last_practice_date  DATE                     -- last day the user submitted a review (NULL = never)
 created_at          TIMESTAMPTZ
 updated_at          TIMESTAMPTZ
 ```
@@ -98,7 +101,7 @@ case_id          UUID REFERENCES cases(id)
 nickname         TEXT             -- user's override nickname, NULL = use default
 algorithm        TEXT             -- user's override algorithm, NULL = use default
 result_case_id   UUID REFERENCES cases(id)   -- user's override result, NULL = use default
-result_rotation  TEXT             -- user's override rotation, NULL = use default
+result_rotation  INT              -- user's override rotation (0–3 quarter-turns CW), NULL = use default
 tier2_tag        TEXT             -- user's override tier2 tag, NULL = use default
 created_at       TIMESTAMPTZ
 updated_at       TIMESTAMPTZ
@@ -116,7 +119,7 @@ ease_factor     FLOAT DEFAULT 2.5
 interval_days   INT DEFAULT 1
 repetitions     INT DEFAULT 0    -- consecutive correct reviews
 due_date        DATE DEFAULT NOW()
-last_grade      INT              -- 0–5, last grade given
+last_grade      INT              -- 0=Again, 1=Hard, 2=Good, 3=Easy
 last_reviewed   TIMESTAMPTZ
 created_at      TIMESTAMPTZ
 updated_at      TIMESTAMPTZ
@@ -160,30 +163,70 @@ created_at  TIMESTAMPTZ
 
 ---
 
-## 4. SM-2 Algorithm
+## 4. Spaced Repetition Algorithm (Anki-style SM-2)
 
-SM-2 is public domain. Implementation per review:
+The data shape (`ease_factor`, `interval_days`, `repetitions`, `due_date`) matches canonical SM-2, but the update rule is Anki's modified version. See `docs/sm2_vs_anki_summary.md` for the rationale.
 
+### Inputs
+A user grade per review, one of four values:
+
+| Code | Button | Meaning |
+|-----:|--------|---------|
+| 0 | Fail  | Failed — couldn't recall |
+| 1 | Hard  | Recalled, but with difficulty |
+| 2 | Good  | Recalled cleanly |
+| 3 | Easy  | Recalled easily, felt too easy |
+
+### Update rule
 ```
-Input: current ease_factor, interval_days, repetitions, grade (0–5)
+Input: ease_factor, interval_days, repetitions, grade ∈ {0,1,2,3}
 
-If grade < 3:
-  repetitions = 0
-  interval_days = 1
+If grade == 0 (Fail):
+    repetitions = 0
+    interval_days = 1
+    ease_factor -= 0.20
 
 Else:
-  if repetitions == 0: interval_days = 1
-  if repetitions == 1: interval_days = 6
-  if repetitions > 1:  interval_days = round(interval_days * ease_factor)
-  repetitions += 1
+    if repetitions == 0:
+        interval_days = 1
+    elif repetitions == 1:
+        interval_days = 6
+    else:
+        if grade == 1 (Hard):
+            interval_days = round(interval_days * HARD_INTERVAL_MULT)
+        elif grade == 2 (Good):
+            interval_days = round(interval_days * ease_factor)
+        elif grade == 3 (Easy):
+            interval_days = round(interval_days * ease_factor * EASY_BONUS)
 
-ease_factor = ease_factor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
-ease_factor = max(1.3, ease_factor)   -- floor of 1.3
+    repetitions += 1
 
+    Ease delta:
+        Hard: ease_factor -= 0.15
+        Good: ease_factor unchanged
+        Easy: ease_factor += 0.15
+
+ease_factor = max(EASE_FLOOR, ease_factor)
 due_date = today + interval_days
 ```
 
-The ease factor is per-user per-case and drifts over time based on grading history. Cards graded consistently high get longer intervals. Cards graded low get reset and reviewed sooner.
+### Constants
+| Constant | Value | Notes |
+|----------|------:|-------|
+| Initial `ease_factor` | 2.5 | Default for a new card |
+| `EASE_FLOOR` | 1.3 | Minimum ease |
+| `HARD_INTERVAL_MULT` | 1.2 | Anki default |
+| `EASY_BONUS` | 1.3 | Anki default |
+| Fail ease delta | −0.20 | Anki default |
+
+### Why this differs from canonical SM-2
+Canonical SM-2 uses 0–5 grades with a smooth quadratic ease formula and treats `q < 3` as failure. The Anki variant collapses to 4 buttons, uses flat ease deltas (±0.15), and isolates the failure case to the single Fail button — friendlier UX and avoids "ease hell" (cards that fail repeatedly drop ease very low and then keep failing).
+
+### Behavioral notes
+- **Learning steps** (Anki's `1m / 10m` intermediate intervals before SM-2 kicks in) are not implemented. New cards go directly into the schedule on first review (rep 0 → 1d, rep 1 → 6d, then × ease).
+- **Late-review bonus** (Anki's bonus for cards reviewed past their due date) is not implemented.
+- **New cards** stay in `not_started` and are not auto-promoted into the due queue. The user explicitly starts a card from the case browser/detail; the first review creates the `user_case_progress` row.
+- **Streak update**: on each review submission, if `last_practice_date` is yesterday → `streak_count += 1`; if today → no change; otherwise → `streak_count = 1`. Then set `last_practice_date = today`.
 
 ---
 
@@ -263,13 +306,13 @@ All endpoints are prefixed `/api/v1`. All request/response bodies are JSON. Prot
 |--------|----------|------|-------------|
 | GET | `/study/due` | Required | Get cases due today per SM-2 |
 | GET | `/study/free` | Required | Get all cases for free study (filterable) |
-| POST | `/study/:case_id/review` | Required | Submit a grade (0–5), updates SM-2 progress |
+| POST | `/study/:case_id/review` | Required | Submit a grade (0–3 — Fail/Hard/Good/Easy, see §4), updates progress |
 
 Query params for `/study/free`:
 - `tier1_tag` — filter by +, -, L, *
 - `tier2_tag` — filter by T_shapes, knight_move, etc.
 - `tag` — filter by user-defined tag name
-- `status` — `not_started`, `learning`, `due`, `mastered`
+- `status` — `not_started`, `learning`, `due`, `mastered` (thresholds derived from `repetitions` / `interval_days` / `due_date` — see `docs/outstanding_decision.md` §1.3)
 
 ### Progress
 
@@ -323,6 +366,11 @@ Built with Vue 3 + Vite + Vue Router + Pinia.
 | `/progress` | ProgressView | Yes | Full progress breakdown per case |
 | `/settings` | SettingsView | Yes | Account settings, password change |
 
+### Styling
+- Vue Single-File Components (`.vue`) using `<style scoped>` blocks. No CSS-in-JS, no utility framework, no component library.
+- Shared design tokens (palette, fonts, radii) live in a small `tokens.css` ported from `initial_design/src/ui.jsx` (`paper` and `fonts` constants).
+- Light mode only for MVP.
+
 ### Pinia Stores
 - `authStore` — current user, login/logout actions
 - `casesStore` — all cases with user overrides merged
@@ -334,24 +382,22 @@ Built with Vue 3 + Vite + Vue Router + Pinia.
 
 ## 9. Diagram Spec
 
-### Static SVG Files (MVP)
-57 SVG files are pre-built, one per OLL case. Named `oll_{case_number:02}.svg`. These are static assets bundled with the Vue frontend — they do not change and do not need to be served from the API.
+### Dynamic Pattern Rendering (MVP)
+Diagrams are rendered dynamically by a Vue `<PatternDiagram>` component from a 9-character pattern string stored on each case. Reference implementation is the React prototype's `initial_design/src/diagram.jsx` — port the same rendering logic to Vue.
 
-OLL cases are universal and fixed. The SVG files are already generated and proven. Dynamic diagram rendering is explicitly out of scope for MVP.
+The pattern string encodes the OLL face plus side strips. 9 characters, laid out as a 3×3 grid (top-left to bottom-right). Each char is one of:
+- `X` — yellow on top
+- `T` / `L` / `R` / `B` — sticker faces top / left / right / back side respectively
+- (other) — non-yellow top sticker, no side flap
 
-The result mapping (back of card) references another case's SVG by case number plus an optional rotation (`cw`, `180`, `ccw`, or null). The frontend applies CSS `transform: rotate()` to the referenced SVG — no additional image files needed. Only 57 files serve all 114 front/back combinations.
+The string is stored in `cases.diagram_data` (JSONB) so the field can be extended later for stages with richer diagram data (e.g. PLL/F2L) without a schema change.
 
-**SVG spec:**
-- Canvas: ~142×142px, white background, `rx=8`
-- Top face: 3×3 grid of 34×34px cells, `rx=1`
-  - Yellow `#FFD700` for `X` cells
-  - Light gray `#EEEEEE` for non-`X` cells
-  - Medium gray `#DDDDDD` face background
-- Side strips: 10px thick, yellow only where sticker faces that side, 2px gap from face, 8px outer padding
-- Stroke: `#333333`, 0.8px
+The result mapping (back of card) references another case by `result_case_id` plus a `result_rotation` integer (0–3 quarter-turns clockwise). The frontend applies CSS `transform: rotate(90deg * n)` to the rendered SVG — no additional images needed.
 
-### Post-MVP Note
-The `diagram_data` JSONB field in the `cases` table retains the raw LXR/TXB grid notation. This is not used by the MVP frontend but preserves the option to render diagrams dynamically in the future — for example when adding PLL or F2L cases that may have different diagram styles not covered by the existing SVG set.
+**Rendering spec:** mirror the prototype's existing visual treatment. The component is responsible for size, aspect, and colors. Restyling later (theming, dark mode, larger displays) is straightforward without re-exporting any image assets.
+
+### Why dynamic rather than pre-built SVGs
+Static SVGs were the original plan, but dynamic rendering is simpler operationally — no asset pipeline, no naming conventions, no manual export step when a case representation is tweaked. Performance is fine: 57 small SVGs rendered client-side from a 9-char input. Keeping the renderer also leaves room to restyle without re-exporting images.
 
 ---
 
