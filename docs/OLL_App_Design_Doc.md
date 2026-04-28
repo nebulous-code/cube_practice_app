@@ -18,6 +18,7 @@ A web-based spaced repetition flashcard app for Rubik's cube algorithm practice.
 - Progress dashboard: due today, learning, mastered, not started
 - Daily study streak tracking
 - Mobile-friendly web app (mobile-shaped layout on desktop is acceptable for MVP)
+- Guest mode (last MVP feature shipped — see `docs/guest_mode_design_doc.md`)
 
 ### Post-MVP
 - PLL, F2L, and other solve stage expansion
@@ -79,17 +80,20 @@ UNIQUE(solve_stage_id, case_number)
 
 ### `users`
 ```
-id                  UUID PRIMARY KEY
-email               TEXT UNIQUE NOT NULL
-password_hash       TEXT NOT NULL
-email_verified      BOOLEAN DEFAULT FALSE
-verification_token  TEXT
-reset_token         TEXT
-reset_token_expires TIMESTAMPTZ
-streak_count        INT NOT NULL DEFAULT 0   -- consecutive practice days; updated on each review
-last_practice_date  DATE                     -- last day the user submitted a review (NULL = never)
-created_at          TIMESTAMPTZ
-updated_at          TIMESTAMPTZ
+id                       UUID PRIMARY KEY
+email                    TEXT UNIQUE NOT NULL
+pending_email            TEXT             -- new email awaiting verification after a profile email change; NULL when none
+display_name             TEXT NOT NULL    -- shown on avatar/settings; captured at registration
+password_hash            TEXT NOT NULL
+email_verified           BOOLEAN NOT NULL DEFAULT FALSE
+verification_code        TEXT             -- 6-digit code emailed for verification; NULL when none active
+verification_code_expires TIMESTAMPTZ     -- 10-minute TTL from issue
+reset_code               TEXT             -- 6-digit code emailed for password reset; NULL when none active
+reset_code_expires       TIMESTAMPTZ      -- 1-hour TTL from issue
+streak_count             INT NOT NULL DEFAULT 0   -- consecutive practice days; updated on each review
+last_practice_date       DATE                     -- last day the user submitted a review (NULL = never)
+created_at               TIMESTAMPTZ
+updated_at               TIMESTAMPTZ
 ```
 
 ### `user_case_settings`
@@ -232,47 +236,95 @@ Canonical SM-2 uses 0–5 grades with a smooth quadratic ease formula and treats
 
 ## 5. Auth Design
 
+All verification and reset flows use **6-digit numeric codes** entered into the app rather than links in emails. This is friendlier on mobile (no app-switching) and matches the auth mockups. reCAPTCHA is reCAPTCHA v3 (invisible — no UI element, just a token submitted with form posts).
+
 ### Registration Flow
-1. User submits email, password, reCAPTCHA token
+1. User submits `display_name`, email, password, reCAPTCHA token
 2. Backend verifies reCAPTCHA with Google's API
 3. Password hashed with argon2id
-4. User row inserted with `email_verified = false` and a generated `verification_token`
-5. Verification email sent with a link containing the token
-6. User clicks link → backend sets `email_verified = true`, clears token
-7. User can now log in
+4. User row inserted with `email_verified = false`, a generated 6-digit `verification_code`, and `verification_code_expires = now + 10 minutes`
+5. Verification email sent containing the 6-digit code
+6. User enters the code on the verify screen → backend validates code + expiry, sets `email_verified = true`, clears the code fields
+7. **On success the verify endpoint sets the JWT cookie** — the user is logged in directly and lands in onboarding/dashboard. No separate sign-in step.
 
 ### Login Flow
 1. User submits email and password
 2. Backend fetches user by email, verifies password with argon2
-3. Checks `email_verified = true`
+3. Checks `email_verified = true` — if not, returns 403 with `{ reason: "email_not_verified" }` and the frontend routes to the verify screen with a fresh `resend-verification` call
 4. Generates JWT: `{ sub: user_id, exp: now + 30 days, iat: now }`
 5. Signs with HS256 using `JWT_SECRET` environment variable
 6. Sets JWT as httpOnly, Secure, SameSite=Strict cookie
-7. Returns 200 with basic user info (id, email) — no JWT in response body
+7. Returns 200 with basic user info (id, email, display_name) — no JWT in response body
 
 ### Per-Request Auth
 1. Axum `AuthUser` extractor reads the httpOnly cookie
 2. Decodes and validates JWT signature with `JWT_SECRET`
 3. Checks expiry
-4. Extracts `user_id` from claims
-5. Injects into handler or returns 401
+4. Looks up the matching `sessions` row by token hash; rejects if `revoked = true`
+5. Extracts `user_id` from claims
+6. Injects into handler or returns 401
 
 ### Logout
 - Backend clears the httpOnly cookie
-- Optionally marks the session as revoked in the `sessions` table
+- Marks the current session row as revoked in the `sessions` table
+
+### Sign Out Everywhere
+- `POST /auth/sign-out-all` with body `{ current_password }`
+- Backend verifies `current_password` with argon2 before doing anything (defense against an attacker with temporary access to a logged-in device)
+- On success: sets `revoked = true` on every session row for the current user (including the current one), clears the JWT cookie, returns 200
+- On wrong password: returns 401, no sessions touched
+- Frontend redirects to `/login` on success
+
+### Resend Verification Code
+- `POST /auth/resend-verification` — generates a new `verification_code`, replaces the stored one, resets `verification_code_expires`, and emails the new code
+- Rate-limited to 1 request per minute per user
 
 ### Password Reset Flow
-1. User submits email
-2. Backend generates a `reset_token` with a 1-hour expiry, stores on user row
-3. Reset email sent with link containing token
-4. User submits new password + token
-5. Backend validates token and expiry, hashes new password, clears token
-6. User logs in with new password
+1. User submits email on the forgot-password screen
+2. Backend generates a 6-digit `reset_code` with `reset_code_expires = now + 1 hour`, stores on user row. Endpoint is idempotent — calling it again overwrites the existing code
+3. Reset email sent containing the 6-digit code
+4. User enters code + new password on the reset screen
+5. Backend validates code + expiry, hashes new password, clears `reset_code` and `reset_code_expires`
+6. User logs in with the new password (no auto-login on reset — they explicitly enter the new password on the login screen)
+
+### Change Password (logged-in user)
+- `POST /auth/change-password` with `{ current_password, new_password }`
+- Backend verifies `current_password` with argon2
+- Hashes and stores `new_password`
+- JWT cookie is unchanged — user stays logged in on this device. Other devices stay logged in too unless the user follows up with `sign-out-all`
+
+### Profile Update (display name, email)
+- `PATCH /auth/me` accepts `{ display_name?, email? }`
+- `display_name` updates write-through immediately
+- **Email change uses a `pending_email` flow:**
+  1. New email is written to `users.pending_email` (NOT `email`)
+  2. A new `verification_code` is generated for the pending email and emailed there
+  3. The user keeps their existing `email`, `email_verified` stays `true`, and the user remains logged in
+  4. Frontend shows a banner: "Verify your new email <pending_email> to switch addresses." with a resend button
+  5. When the user submits the verification code, the verify endpoint detects the `pending_email`, copies it into `email`, clears `pending_email` and the code fields, and confirms success
+  6. Until verified, login still works with the original email; no risk of typo lockout
 
 ### Token Lifetime
 - 30-day JWT, no refresh token
 - Activity does not reset the clock (simplest implementation)
 - If security becomes a concern post-MVP, sliding expiry or refresh tokens can be added
+
+### Frontend Route Guard
+- Any unauthenticated request to a protected route redirects to `/login?next=<original-path>`
+- After successful login, the frontend reads `next` and routes there (default `/`)
+- Any authenticated request to `/login`, `/register`, `/forgot-password`, `/reset-password` redirects to `/`
+- `/verify-email` is reachable both authenticated (during email change) and unauthenticated (during initial registration if the user closes the tab and comes back)
+
+### Splash Screen
+- The frontend renders a logo splash on initial app load while the cookie is exchanged for `/auth/me`
+- Minimum display time: 800ms (so the splash doesn't flicker on a fast response)
+- Maximum: until `/auth/me` resolves (success → app, 401 → `/login`)
+
+### Static Pages
+- `/about`, `/terms`, `/privacy`, `/acknowledgements` are static frontend pages — no API
+- Reachable from the login footer, registration footer ("By creating an account you agree to our Terms…"), and the Settings → About section
+- Terms and Privacy content is required pre-launch (tracked in `docs/TODO.md`)
+- Acknowledgements can auto-generate from `package.json` / `Cargo.toml` license metadata; manual content is fine for MVP
 
 ---
 
@@ -284,13 +336,17 @@ All endpoints are prefixed `/api/v1`. All request/response bodies are JSON. Prot
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/register` | None | Register new user |
-| POST | `/auth/verify-email` | None | Verify email with token |
-| POST | `/auth/login` | None | Login, sets cookie |
-| POST | `/auth/logout` | Required | Clears cookie |
-| POST | `/auth/forgot-password` | None | Send reset email |
-| POST | `/auth/reset-password` | None | Submit new password with token |
-| GET | `/auth/me` | Required | Get current user info |
+| POST | `/auth/register` | None | Register new user (display_name, email, password, reCAPTCHA token) |
+| POST | `/auth/verify-email` | Optional | Verify email with 6-digit code; sets JWT cookie on initial verification; for email-change verification, requires existing auth and promotes `pending_email` |
+| POST | `/auth/resend-verification` | Optional | Resend the verification code; rate-limited 1/min per user. Auth optional — accepts either the current session or `{ email }` body for the unauthenticated initial-verification case |
+| POST | `/auth/login` | None | Login, sets cookie. Returns 403 `{ reason: "email_not_verified" }` if email is not yet verified |
+| POST | `/auth/logout` | Required | Clears cookie, revokes the current session row |
+| POST | `/auth/sign-out-all` | Required | Requires `{ current_password }` body. On success revokes all session rows for the user (including the current one) and clears the cookie |
+| POST | `/auth/forgot-password` | None | Send 6-digit reset code by email; idempotent |
+| POST | `/auth/reset-password` | None | Submit new password with 6-digit code |
+| POST | `/auth/change-password` | Required | Change password while logged in (current_password, new_password) |
+| GET | `/auth/me` | Required | Get current user identity: `{ id, email, display_name, pending_email, email_verified }`. Stats live on `/progress` to keep auth/PII separated from app metrics |
+| PATCH | `/auth/me` | Required | Update profile (display_name?, email?). Email change writes to `pending_email` and emails a verification code |
 
 ### Cases
 
@@ -318,7 +374,7 @@ Query params for `/study/free`:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/progress` | Required | Summary: due today, learning, mastered, not started counts |
+| GET | `/progress` | Required | Summary: `{ due_today, learning, mastered, not_started, streak_count, last_practice_date }`. Stats endpoint — kept separate from `/auth/me` so identity/PII stays disjoint from app metrics. New stats fields land here as the app grows |
 | GET | `/progress/cases` | Required | Full progress data for all cases |
 
 ### Tags
@@ -354,17 +410,23 @@ Built with Vue 3 + Vite + Vue Router + Pinia.
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
 | `/login` | LoginView | No | Email/password login form |
-| `/register` | RegisterView | No | Registration form with reCAPTCHA |
-| `/verify-email` | VerifyEmailView | No | Handles email verification link |
-| `/forgot-password` | ForgotPasswordView | No | Request password reset |
-| `/reset-password` | ResetPasswordView | No | Submit new password |
+| `/register` | RegisterView | No | Registration form with invisible reCAPTCHA v3 |
+| `/verify-email` | VerifyEmailView | Optional | 6-digit code entry; same view used for initial verification and email-change verification |
+| `/forgot-password` | ForgotPasswordView | No | Request 6-digit password reset code |
+| `/reset-password` | ResetPasswordView | No | Submit code + new password |
 | `/` | DashboardView | Yes | Progress summary, due cards count, quick start study |
 | `/study` | StudyView | Yes | SM-2 study mode, due cards |
 | `/study/free` | FreeStudyView | Yes | Free study with filters |
 | `/cases` | CaseBrowserView | Yes | Browse all 57 cases |
 | `/cases/:id` | CaseDetailView | Yes | Single case detail, edit overrides |
 | `/progress` | ProgressView | Yes | Full progress breakdown per case |
-| `/settings` | SettingsView | Yes | Account settings, password change |
+| `/settings` | SettingsView | Yes | Account settings, password change, sign out, sign out everywhere |
+| `/about` | AboutView | No | Static — version, links to terms/privacy/acknowledgements |
+| `/terms` | TermsView | No | Static — Terms of Service content |
+| `/privacy` | PrivacyView | No | Static — Privacy Policy content |
+| `/acknowledgements` | AcknowledgementsView | No | Static — third-party license credits |
+
+Splash is rendered before the router resolves, while `/auth/me` is in flight on initial load. See §5 "Splash Screen" for timing.
 
 ### Styling
 - Vue Single-File Components (`.vue`) using `<style scoped>` blocks. No CSS-in-JS, no utility framework, no component library.
@@ -452,7 +514,7 @@ GitHub Actions for both services:
 1. Rust project scaffold — Axum, sqlx, tower-http wired up, health check endpoint live
 2. Database migrations — all tables created via sqlx migrate
 3. Seed script — insert puzzle_types, solve_stages, and all 57 OLL cases with default data
-4. Auth endpoints — register, verify email, login, logout, forgot/reset password
+4. Auth endpoints — register, verify-email (with code), resend-verification, login, logout, sign-out-all, forgot-password, reset-password, change-password, GET/PATCH `/auth/me`
 5. JWT middleware extractor — AuthUser, httpOnly cookie handling
 6. Cases endpoints — GET all, GET one, PATCH settings (with override merge logic)
 7. Study endpoints — due cards, free study with filters, review/grading with SM-2
@@ -469,4 +531,6 @@ GitHub Actions for both services:
 18. Progress view — per-case SM-2 data
 19. Settings — password change, account info
 20. Tags UI — create/delete tags, apply to cases
-21. Deployment — Render setup, environment variables, CI/CD
+21. Static pages — `/about`, `/terms`, `/privacy`, `/acknowledgements` (placeholder content fine until launch)
+22. Guest mode — final MVP feature, per `docs/guest_mode_design_doc.md`
+23. Deployment — Render setup, environment variables, CI/CD
