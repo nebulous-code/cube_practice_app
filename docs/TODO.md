@@ -18,7 +18,7 @@ Things that need a human decision, content, design, or external action — items
 ## Verification / external research
 
 - [ ] **OLL case numbering universality.** From the original outstanding decisions §4: confirm whether the 1–57 case numbering used in `data.jsx` matches the cubing-community convention. Worth a quick check before seed migrations are written, since renumbering after launch is painful.
-- [ ] **Resend domain verification.** Per `OLL_App_Design_Doc.md` §10: "Resend requires domain verification which can take 1–2 business days. Set up and verify the sending domain before beginning auth implementation." Don't let this become the critical path.
+- [ ] **Resend domain verification.** Per `Cube_Practice_Design_Doc.md` §10: "Resend requires domain verification which can take 1–2 business days. Set up and verify the sending domain before beginning auth implementation." Don't let this become the critical path.
 - [ ] **reCAPTCHA v3 site key + secret key.** Need both registered in Google's admin console, with the public key wired into `VITE_RECAPTCHA_SITE_KEY` and the secret into `RECAPTCHA_SECRET_KEY` on the backend.
 
 ## Decisions still open in design docs
@@ -29,7 +29,7 @@ Things that need a human decision, content, design, or external action — items
 ## Infrastructure / accounts
 
 - [ ] **Neon Postgres database** provisioned, connection string captured in `DATABASE_URL`.
-- [ ] **Render frontend + backend services** created, env vars wired up per `OLL_App_Design_Doc.md` §10.
+- [ ] **Render frontend + backend services** created, env vars wired up per `Cube_Practice_Design_Doc.md` §10.
 - [ ] **Custom domain** (post-MVP per the spec — listed here for visibility).
 
 ---

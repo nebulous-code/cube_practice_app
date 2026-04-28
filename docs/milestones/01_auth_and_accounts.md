@@ -45,7 +45,7 @@ Frontend is a separate Render static site; backend is a Render web service. Cook
 
 ## 3. Schema — M1 subset
 
-Only the tables auth touches. Reproduced from `OLL_App_Design_Doc.md` §3 for convenience; that doc remains the source of truth.
+Only the tables auth touches. Reproduced from `Cube_Practice_Design_Doc.md` §3 for convenience; that doc remains the source of truth.
 
 ### `users`
 ```
@@ -83,7 +83,7 @@ Index on `(user_id, revoked)` for fast sign-out-all and on `token_hash` for the 
 
 ## 4. API surface
 
-All endpoints are `POST` unless noted. Prefix `/api/v1`. Request and response bodies are JSON. Cookie-bearing endpoints set/clear `Set-Cookie: oll_session=…; HttpOnly; Secure; SameSite=Strict; Path=/`. JWT is HS256 signed with `JWT_SECRET`, 30-day expiry, claims `{ sub, sid, exp, iat }` where `sid` is the `sessions.id`.
+All endpoints are `POST` unless noted. Prefix `/api/v1`. Request and response bodies are JSON. Cookie-bearing endpoints set/clear `Set-Cookie: cube_session=…; HttpOnly; Secure; SameSite=Strict; Path=/`. JWT is HS256 signed with `JWT_SECRET`, 30-day expiry, claims `{ sub, sid, exp, iat }` where `sid` is the `sessions.id`.
 
 ### Errors
 A single error envelope across the surface:
@@ -182,30 +182,30 @@ A single error envelope across the surface:
 Three messages, sent through Resend's REST API. Markdown-style copy below; HTML versions get the same content with the app's paper aesthetic in inline styles.
 
 ### 5.1 Verification — initial registration
-Subject: **Verify your OLL Practice email**
+Subject: **Verify your Cube Practice email**
 
 Body:
-> Welcome to OLL Practice.
+> Welcome to Cube Practice.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. If you didn't sign up, you can ignore this email.
 
 ### 5.2 Verification — email change
-Subject: **Confirm your new OLL Practice email**
+Subject: **Confirm your new Cube Practice email**
 
 Body:
-> You requested to change the email on your OLL Practice account to **{new_email}**.
+> You requested to change the email on your Cube Practice account to **{new_email}**.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. Until you confirm, sign-in will continue to work with your previous email.
 
 ### 5.3 Password reset
-Subject: **Reset your OLL Practice password**
+Subject: **Reset your Cube Practice password**
 
 Body:
-> Someone requested a password reset for your OLL Practice account.
+> Someone requested a password reset for your Cube Practice account.
 >
 > Your 6-digit reset code is: **`{code}`**
 >
@@ -307,7 +307,7 @@ JWT_SECRET            # 256-bit random
 RECAPTCHA_SECRET_KEY  # Google reCAPTCHA v3 secret
 RECAPTCHA_MIN_SCORE   # default 0.5
 RESEND_API_KEY        # Resend API key
-EMAIL_FROM            # verified sender, e.g. "OLL Practice <noreply@ollpractice.app>"
+EMAIL_FROM            # verified sender, e.g. "Cube Practice <noreply@mail.nebulouscode.com>"
 FRONTEND_URL          # CORS allowlist + email link generation
 RUST_LOG              # default "info,oll=debug"
 ARGON2_M_KIB          # default 19456

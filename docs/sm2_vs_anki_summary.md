@@ -8,7 +8,7 @@ The original SM-2 algorithm uses a 0–5 grading scale; Anki uses a 4-button UI 
 
 ## Canonical SM-2 (Piotr Wozniak, 1988)
 
-The algorithm published in the original SuperMemo paper. This is what `docs/OLL_App_Design_Doc.md:163-184` currently specifies.
+The algorithm published in the original SuperMemo paper. This is what `docs/Cube_Practice_Design_Doc.md:163-184` currently specifies.
 
 ### Inputs
 A quality grade `q ∈ {0, 1, 2, 3, 4, 5}` per review:
@@ -76,7 +76,7 @@ The proposal "map 0&1 → button 0, 2&3 → button 1, 4 → button 2, 5 → butt
 
 ### Three coherent paths
 
-1. **Adopt Anki's modified algorithm wholesale.** Keep the 4-button UI from the prototype. Replace the canonical SM-2 ease formula with Anki's flat ±0.15 rule. Keep the SM-2 *data shape* (`ease_factor`, `interval_days`, `repetitions`, `due_date`) so the schema in `OLL_App_Design_Doc.md` §3 is unchanged — only §4 (the algorithm) needs to be rewritten. Recommended.
+1. **Adopt Anki's modified algorithm wholesale.** Keep the 4-button UI from the prototype. Replace the canonical SM-2 ease formula with Anki's flat ±0.15 rule. Keep the SM-2 *data shape* (`ease_factor`, `interval_days`, `repetitions`, `due_date`) so the schema in `Cube_Practice_Design_Doc.md` §3 is unchanged — only §4 (the algorithm) needs to be rewritten. Recommended.
 
 2. **Stay strictly canonical SM-2.** Switch the UI to six grading buttons (or a slider 0–5). Faithful to the original paper, worse mobile UX, and at odds with what users coming from Anki expect.
 
@@ -85,7 +85,7 @@ The proposal "map 0&1 → button 0, 2&3 → button 1, 4 → button 2, 5 → butt
 ### Recommendation
 Option 1. The prototype already assumes Anki's UX, the algorithm change is small and well-documented, and §1.2 of `outstanding_decision.md` (scheduling model) collapses into the same answer: keep SM-2's data shape, use Anki's update rule on top of it.
 
-If we go with option 1, `OLL_App_Design_Doc.md` §4 should be rewritten to describe Anki's rule explicitly rather than the canonical formula.
+If we go with option 1, `Cube_Practice_Design_Doc.md` §4 should be rewritten to describe Anki's rule explicitly rather than the canonical formula.
 
 ---
 

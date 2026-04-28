@@ -2,7 +2,7 @@
 
 A running list of open questions and conflicts that need to be resolved before Vue/Rust implementation begins. Items are grouped roughly by impact — design conflicts first, then unspecified MVP details, then tooling choices.
 
-> **Update (2026-04-28):** SM-2 vs Anki research is now in `docs/sm2_vs_anki_summary.md` and you picked the Anki variant. `OLL_App_Design_Doc.md` has been updated to match (§4 rewritten, schema field types adjusted, §9 switched to dynamic rendering, §1 product scope updated).
+> **Update (2026-04-28):** SM-2 vs Anki research is now in `docs/sm2_vs_anki_summary.md` and you picked the Anki variant. `Cube_Practice_Design_Doc.md` has been updated to match (§4 rewritten, schema field types adjusted, §9 switched to dynamic rendering, §1 product scope updated).
 >
 > Resolved items below have a `Status:` line. Items still needing your input are flagged **Open** and grouped at the bottom of each section. A new §5 captures sub-decisions that fell out of choosing the Anki variant.
 
@@ -10,10 +10,10 @@ A running list of open questions and conflicts that need to be resolved before V
 
 ## 1. Direct Conflicts Between Design Doc and Initial React Design
 
-These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototype (`initial_design/src/`) disagreed. Each needs an explicit pick before Vue work starts.
+These are places where the spec (`Cube_Practice_Design_Doc.md`) and the React prototype (`initial_design/src/`) disagreed. Each needs an explicit pick before Vue work starts.
 
 ### 1.1 Grading scale: 0–5 (SM-2 classic) vs 0–3 (Anki-style)
-- **Spec:** SM-2 with grades 0–5 (`docs/OLL_App_Design_Doc.md:163-184`).
+- **Spec:** SM-2 with grades 0–5 (`docs/Cube_Practice_Design_Doc.md:163-184`).
 - **Prototype:** four buttons — Fail / Hard / Good / Easy (`srs.jsx:6-11`), values 0–3.
 - **Why it matters:** SM-2's published formula assumes 0–5. A 4-button UI is friendlier but requires either remapping (e.g. 0→0, 1→2, 2→4, 3→5) or replacing SM-2's ease-factor formula with the prototype's recency-weighted score. Pick one and document the mapping if applicable.
 > Response: let's map 0&1 to button 0, 2 & 3 to button 1, and 4 to button 2, and 5 to button 3
@@ -29,7 +29,7 @@ These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototyp
 **Status: Resolved.** SM-2 data shape kept (`ease_factor`, `interval_days`, `repetitions`, `due_date`); the prototype's recency-weighted 0–100 score is dropped. Letter grades become a pure display layer on top of SM-2 data — see §5.6 below for the proposed mapping.
 
 ### 1.3 Progress states: A/B/C/D/F vs not_started/learning/due/mastered
-- **Spec:** Four states for filtering and dashboard counts (`OLL_App_Design_Doc.md:268-272`, `:278`).
+- **Spec:** Four states for filtering and dashboard counts (`Cube_Practice_Design_Doc.md:268-272`, `:278`).
 - **Prototype:** Six letter-grade buckets (A/B/C/D/F/New) computed from score (`srs.jsx:32-48`).
 - **Decision needed:** Keep the spec's four-state taxonomy and drop letter grades, *or* keep letter grades as a richer display and define how they map to the four states. Also need explicit thresholds — at what `interval_days` / `repetitions` / `ease_factor` does a card become "mastered" vs "learning"?
 > Response: TODO:
@@ -44,7 +44,7 @@ These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototyp
 | `mastered` | Row exists AND `due_date > today` AND `interval_days >= 21` |
 
 ### 1.4 Diagrams: pre-built static SVGs vs dynamic pattern rendering
-- **Spec:** 57 pre-built SVG files named `oll_{case_number:02}.svg`, served as static assets, rotated via CSS `transform` for back-of-card. "Dynamic diagram rendering is explicitly out of scope for MVP" (`OLL_App_Design_Doc.md:336-354`).
+- **Spec:** 57 pre-built SVG files named `oll_{case_number:02}.svg`, served as static assets, rotated via CSS `transform` for back-of-card. "Dynamic diagram rendering is explicitly out of scope for MVP" (`Cube_Practice_Design_Doc.md:336-354`).
 - **Prototype:** `<PatternDiagram>` renders dynamically from the 9-char pattern string (`diagram.jsx`). No SVG files exist on disk yet.
 - **Decision needed:** (a) Generate the 57 static SVGs (from what source — the prototype's pattern strings? hand-drawn?), or (b) accept that the prototype's dynamic renderer is the implementation and update the spec accordingly. The dynamic approach is honestly simpler to maintain and already works — the spec's static-SVG decision should probably be revisited.
 > Response: Keep the prototype's dnamic rendering incase we want to restyle it.
@@ -52,7 +52,7 @@ These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototyp
 **Status: Resolved.** Design doc §9 has been rewritten to specify dynamic rendering from the 9-char pattern string stored in `cases.diagram_data`. `result_rotation` is an integer 0–3 (per §2.5). Static-SVG references and the SVG export spec are removed.
 
 ### 1.5 Information architecture: 3 bottom tabs vs 12 routes
-- **Spec:** 12 named routes incl. `/login`, `/study`, `/study/free`, `/cases`, `/cases/:id`, `/progress`, `/settings`, etc. (`OLL_App_Design_Doc.md:307-324`).
+- **Spec:** 12 named routes incl. `/login`, `/study`, `/study/free`, `/cases`, `/cases/:id`, `/progress`, `/settings`, etc. (`Cube_Practice_Design_Doc.md:307-324`).
 - **Prototype:** Three bottom-tab views (Practice / Cases / Progress) with practice and case-detail as full-bleed modal-style routes (`app.jsx`). No login/settings UI at all.
 - **Decision needed:** Confirm the final IA. Options:
   - Keep the prototype's 3-tab shell and add auth/settings as separate stacked routes outside the tab bar. Mobile-friendly.
@@ -63,7 +63,7 @@ These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototyp
 **Status: Resolved.** Tab bar visible on Dashboard, Cases, Progress; everything else (auth views, study, free study, case detail, settings) is full-bleed. Settings reachable from a top-right user icon on tabbed screens; sub-screens reached from buttons on the tab screens. Mockup is the source of truth for the specifics — implementation should mirror it.
 
 ### 1.6 Streak tracking
-- **Spec:** Listed under **Post-MVP** (`OLL_App_Design_Doc.md:26`).
+- **Spec:** Listed under **Post-MVP** (`Cube_Practice_Design_Doc.md:26`).
 - **Prototype:** Streak is a top-row KPI on the home screen with prominent treatment (`screen-home.jsx:65-72`).
 - **Decision needed:** Cut from MVP and ship without it, or promote streak to MVP scope.
 > Response: Promote to MVP scope
@@ -71,7 +71,7 @@ These are places where the spec (`OLL_App_Design_Doc.md`) and the React prototyp
 **Status: Resolved.** Streak moved into MVP features in design doc §1. (Schema may need a small addition — `users.streak_count` and `users.last_practice_date`, or a `daily_practice` aggregation table — see §5.7 below.)
 
 ### 1.7 Stats / progress-over-time
-- **Spec:** "Stats over time and progress graphs" listed under **Post-MVP** (`OLL_App_Design_Doc.md:24`).
+- **Spec:** "Stats over time and progress graphs" listed under **Post-MVP** (`Cube_Practice_Design_Doc.md:24`).
 - **Prototype:** Stats screen exists with weekly/30-day review counts and per-group breakdown (`screen-stats.jsx`).
 - **Decision needed:** Same as above — does the existing stats screen ship in MVP, or get cut down to the simpler "progress" dashboard the spec calls for?
 > Response: Cut it to be simpler. Leave the skeleton there so users know it's coming
@@ -97,7 +97,7 @@ The spec lists `LoginView`, `RegisterView`, `VerifyEmailView`, `ForgotPasswordVi
 **Status: Resolved (pending designs from you).**
 
 ### 2.2 Status thresholds
-The four progress states (`not_started`, `learning`, `due`, `mastered`) are referenced in the API filter (`OLL_App_Design_Doc.md:272`) but never defined in concrete terms. Need explicit rules, e.g. "mastered = `repetitions >= 5 AND ease_factor >= 2.3`."
+The four progress states (`not_started`, `learning`, `due`, `mastered`) are referenced in the API filter (`Cube_Practice_Design_Doc.md:272`) but never defined in concrete terms. Need explicit rules, e.g. "mastered = `repetitions >= 5 AND ease_factor >= 2.3`."
 > Response: Need to discuss this more
 
 **Status: Open — folded into §1.3 above.** Pick a rule from there (or propose a different one) and it answers both items.
@@ -120,7 +120,7 @@ The prototype hardcodes 10 (weakest) or 15 (all) cards per session (`app.jsx:28`
 **Status: Resolved (interpretive).** Prototype gains a tag-edit UI on the case detail screen. Reading the response together with the spec: Tier 1 stays fixed and global; Tier 2 is user-overridable per case (the override lives in `user_case_settings.tier2_tag`); free-form user tags are CRUD-able and many-to-many via `tags` + `case_tags`. Speak up if any of that's wrong.
 
 ### 2.5 Result rotation representation
-- Spec: `result_rotation` is a string `NULL | "cw" | "180" | "ccw"` (`OLL_App_Design_Doc.md:71, 101`).
+- Spec: `result_rotation` is a string `NULL | "cw" | "180" | "ccw"` (`Cube_Practice_Design_Doc.md:71, 101`).
 - Prototype: integer 0–3 quarter-turns CW (`data.jsx:3`).
 - Pick one and use it consistently in DB schema, API JSON, and frontend.
 > Response: I like integer best
@@ -134,7 +134,7 @@ The seed script needs canonical data for all 57 cases (algorithms, default nickn
 **Status: Resolved.** Seed script will port from `initial_design/src/data.jsx`.
 
 ### 2.7 `diagram_data` JSONB shape
-The spec keeps `diagram_data` in `cases` but says it's not used by MVP (`OLL_App_Design_Doc.md:353-354`). If we're going with static SVGs, do we still populate it? If we go with dynamic rendering (§1.4), this becomes the actual source of truth, and its schema needs nailing down — probably just the 9-char pattern string from the prototype.
+The spec keeps `diagram_data` in `cases` but says it's not used by MVP (`Cube_Practice_Design_Doc.md:353-354`). If we're going with static SVGs, do we still populate it? If we go with dynamic rendering (§1.4), this becomes the actual source of truth, and its schema needs nailing down — probably just the 9-char pattern string from the prototype.
 > Response: yeah that works
 
 **Status: Resolved.** `cases.diagram_data` stores the 9-char pattern string and is the source of truth for the dynamic renderer. Made `NOT NULL` in the schema. Design doc §3 and §9 updated.
@@ -241,7 +241,7 @@ Spec says "mobile-friendly web app." Prototype is mobile-only (fixed-feel narrow
 
 You picked option 1 from `sm2_vs_anki_summary.md` — Anki's modified SM-2 with a 4-button UI. Sub-knobs and their settled values:
 
-All resolved. Values landed in `OLL_App_Design_Doc.md` §4 (algorithm constants and behavioral notes), §3 (`users.streak_count`, `users.last_practice_date`), and §8 (styling note for §3.2).
+All resolved. Values landed in `Cube_Practice_Design_Doc.md` §4 (algorithm constants and behavioral notes), §3 (`users.streak_count`, `users.last_practice_date`), and §8 (styling note for §3.2).
 
 | # | Decision | Resolution |
 |---|----------|------------|

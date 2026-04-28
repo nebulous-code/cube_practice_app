@@ -1,9 +1,9 @@
-# OLL Practice App — Design Document
+# Cube Practice App — Design Document
 
 ## 1. Product Scope
 
 ### What It Is
-A web-based spaced repetition flashcard app for Rubik's cube algorithm practice. Modeled on Anki's core study loop but purpose-built for OLL (and future solve stages). Users study cases, grade themselves with a 4-button rating (Fail / Hard / Good / Easy), and an Anki-style modified SM-2 algorithm schedules future reviews. See `docs/sm2_vs_anki_summary.md` for why the Anki variant rather than canonical SM-2.
+A web-based spaced repetition flashcard app for Rubik's cube algorithm practice. Modeled on Anki's core study loop. The MVP ships OLL (Orientation of the Last Layer) on a 3×3, with the schema and API designed to expand to PLL, F2L, and other stages/puzzles post-MVP. Users study cases, grade themselves with a 4-button rating (Fail / Hard / Good / Easy), and an Anki-style modified SM-2 algorithm schedules future reviews. See `docs/sm2_vs_anki_summary.md` for why the Anki variant rather than canonical SM-2.
 
 ### MVP Features
 - Email/password registration with email verification and reCAPTCHA

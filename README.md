@@ -22,7 +22,9 @@ initial_design/  React prototype — reference for the Vue port
 ```
 cd backend
 cp .env.example .env  # fill in DATABASE_URL etc as needed
-cargo run
+cargo run             # debug profile, fast compile
+# or
+cargo run --release   # release profile — what Render runs in production
 ```
 
 Health check: `curl http://localhost:8080/api/v1/health` → `{"status":"ok"}`.
@@ -32,6 +34,15 @@ Run the test suite (once tests exist):
 ```
 cargo test
 ```
+
+### Render deployment
+
+The backend Render service is configured as:
+
+- **Build:** `cargo build --release`
+- **Start:** `cargo run --release`
+
+`cargo run --release` is preferred over invoking the binary by path so a future package rename doesn't require touching Render config.
 
 ## Run the frontend
 
@@ -51,7 +62,7 @@ npm run build
 
 ## Where to look first
 
-- `docs/OLL_App_Design_Doc.md` — full product/spec
+- `docs/Cube_Practice_Design_Doc.md` — full product/spec
 - `docs/milestones/README.md` — milestone breakdown
 - `docs/milestones/01_auth_and_accounts.md` — current milestone's design + story list
 - `docs/TODO.md` — items on the user's plate (terms/privacy content, account provisioning, etc.)

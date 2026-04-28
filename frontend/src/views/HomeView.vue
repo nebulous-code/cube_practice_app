@@ -7,7 +7,7 @@
   <main class="placeholder">
     <div class="card">
       <p class="eyebrow">Milestone 1</p>
-      <h1>OLL Practice — scaffolding</h1>
+      <h1>Cube Practice — scaffolding</h1>
       <p class="body">
         Auth and user account flows ship in this milestone. The practice/cases/progress views
         come online in later milestones.

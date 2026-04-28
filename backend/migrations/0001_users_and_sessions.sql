@@ -1,5 +1,5 @@
 -- Initial auth schema: users + sessions.
--- See docs/milestones/01_auth_and_accounts.md §3 and docs/OLL_App_Design_Doc.md §3.
+-- See docs/milestones/01_auth_and_accounts.md §3 and docs/Cube_Practice_Design_Doc.md §3.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

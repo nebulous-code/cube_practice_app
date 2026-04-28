@@ -1,31 +1,47 @@
+mod auth;
 mod config;
 mod db;
 mod error;
 mod routes;
+mod state;
 
 use std::time::Duration;
 
 use axum::Router;
-use tower_http::{
-    cors::CorsLayer,
-    timeout::TimeoutLayer,
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::Config;
+use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,oll_backend=debug")))
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,cube_backend=debug")),
+        )
         .with(tracing_subscriber::fmt::layer().compact())
         .init();
 
     let config = Config::from_env()?;
     let bind_addr = format!("0.0.0.0:{}", config.port);
+
+    let pool = match &config.database_url {
+        Some(url) => {
+            tracing::info!("connecting to database");
+            db::connect(url).await?
+        }
+        None => {
+            anyhow::bail!(
+                "DATABASE_URL is not set. Add it to backend/.env (see .env.example)."
+            );
+        }
+    };
+
+    let state = AppState::new(pool, config.clone());
 
     let cors = CorsLayer::new()
         .allow_origin(config.frontend_url.parse::<axum::http::HeaderValue>()?)
@@ -37,10 +53,15 @@ async fn main() -> anyhow::Result<()> {
             axum::http::Method::DELETE,
             axum::http::Method::OPTIONS,
         ])
-        .allow_headers([axum::http::header::CONTENT_TYPE, axum::http::header::ACCEPT]);
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+            axum::http::header::COOKIE,
+        ]);
 
     let app = Router::new()
         .nest("/api/v1", routes::router())
+        .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(TimeoutLayer::new(Duration::from_secs(15)))
         .layer(cors);

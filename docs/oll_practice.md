@@ -3,7 +3,7 @@ tags:
   - rubiks_cube
   - OLL
 ---
-# OLL Practice — Full Case Reference
+# OLL — Full Case Reference
 
 ## No Edges Flipped (Dot)
 

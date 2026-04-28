@@ -9,7 +9,7 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 1. **Auth first.** Account flows are the riskiest non-app concern — email deliverability, JWT cookies, reCAPTCHA, argon2 hashing, the Resend integration, the Neon connection. Getting them working early on a real deployed instance means everything else is built on a known-good foundation. It also forces the "is the deploy pipeline working?" question to be answered up front.
 2. **Data before behavior.** All 57 cases ship and render before any review/scheduling logic lands. Confidence the case data is right and the diagrams render is a prerequisite for trusting the SM-2 numbers later.
 3. **Core loop before periphery.** Study mode + grading + scheduling lands before the dashboard, free study, tags, and stats. The latter are mostly views over data the core loop produces.
-4. **Guest mode last.** Per `OLL_App_Design_Doc.md` §1 and `guest_mode_design_doc.md`, guest mode is the final MVP feature, layered on top of the authenticated path.
+4. **Guest mode last.** Per `Cube_Practice_Design_Doc.md` §1 and `guest_mode_design_doc.md`, guest mode is the final MVP feature, layered on top of the authenticated path.
 
 ---
 
@@ -62,7 +62,7 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 **Goal:** The meat and potatoes — a user can study due cards, grade them, and have the Anki-variant SM-2 schedule update correctly. Streak ticks.
 
 **Done when:**
-- Reviewing a card runs SM-2 (per `OLL_App_Design_Doc.md` §4) → `due_date` updates → streak updates per the day-rollover rule
+- Reviewing a card runs SM-2 (per `Cube_Practice_Design_Doc.md` §4) → `due_date` updates → streak updates per the day-rollover rule
 - Practice tab pulls due cards and runs the full study session (pattern → reveal algorithm → 4-button grade → next)
 - Failing a card resets `repetitions` and `interval_days` correctly; Hard/Easy modify ease per the constants table
 - Cards transition through `not_started` → `learning` → `due` → `mastered` per the §1.3 thresholds
@@ -148,10 +148,10 @@ Things that should *not* be parallelized:
 
 ## Deployment posture
 
-Render + Neon + Resend are live from M1 onward. Each milestone's "done when" is verified against the deployed environment, not a local-only build. CI deploys on green main per `OLL_App_Design_Doc.md` §10. No big-bang launch — by the end of M6 the deployed app *is* the MVP.
+Render + Neon + Resend are live from M1 onward. Each milestone's "done when" is verified against the deployed environment, not a local-only build. CI deploys on green main per `Cube_Practice_Design_Doc.md` §10. No big-bang launch — by the end of M6 the deployed app *is* the MVP.
 
 ---
 
 ## After M6
 
-Out of scope for this document. The post-MVP list in `OLL_App_Design_Doc.md` §1 (PLL/F2L, stats over time, admin panel, public case browser, dark mode) is the source of truth for what comes next.
+Out of scope for this document. The post-MVP list in `Cube_Practice_Design_Doc.md` §1 (PLL/F2L, stats over time, admin panel, public case browser, dark mode) is the source of truth for what comes next.
