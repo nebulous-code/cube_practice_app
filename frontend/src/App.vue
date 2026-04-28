@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 
+import PendingEmailBanner from '@/components/PendingEmailBanner.vue'
 import SplashView from '@/components/SplashView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -12,5 +13,8 @@ auth.bootstrap()
 
 <template>
   <SplashView v-if="auth.status === 'loading'" />
-  <RouterView v-else />
+  <template v-else>
+    <PendingEmailBanner />
+    <RouterView />
+  </template>
 </template>

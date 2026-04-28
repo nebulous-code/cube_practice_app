@@ -75,7 +75,7 @@ async function onSubmit() {
       />
 
       <p class="forgot">
-        <TextLink type="button" disabled>Forgot password?</TextLink>
+        <TextLink type="button" @click="router.push('/forgot-password')">Forgot password?</TextLink>
       </p>
 
       <p v-if="formError" class="form-error">{{ formError }}</p>

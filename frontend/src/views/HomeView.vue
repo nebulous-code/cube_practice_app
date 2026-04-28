@@ -28,6 +28,7 @@ async function onSignOut() {
         </span>
       </p>
       <div class="actions">
+        <button class="settings" type="button" @click="router.push('/settings')">Settings</button>
         <button class="signout" type="button" @click="onSignOut">Sign out</button>
       </div>
     </div>
@@ -94,9 +95,9 @@ h1 {
   gap: var(--space-4);
 }
 
+.settings,
 .signout {
   background: transparent;
-  color: var(--paper-error);
   border: 1px solid var(--paper-rule);
   border-radius: 12px;
   padding: 10px 16px;
@@ -104,5 +105,13 @@ h1 {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.settings {
+  color: var(--paper-ink);
+}
+
+.signout {
+  color: var(--paper-error);
 }
 </style>

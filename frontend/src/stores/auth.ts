@@ -119,6 +119,62 @@ export const useAuthStore = defineStore('auth', () => {
     status.value = 'guest'
   }
 
+  async function forgotPassword(email: string): Promise<void> {
+    await api.post('/auth/forgot-password', { email })
+  }
+
+  async function resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<void> {
+    await api.post('/auth/reset-password', {
+      email,
+      code,
+      new_password: newPassword,
+    })
+  }
+
+  async function changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+  }
+
+  async function signOutAll(currentPassword: string): Promise<void> {
+    await api.post('/auth/sign-out-all', { current_password: currentPassword })
+    user.value = null
+    status.value = 'guest'
+  }
+
+  async function updateProfile(payload: {
+    display_name?: string
+    email?: string
+  }): Promise<User> {
+    const response = await api.patch<User>('/auth/me', payload)
+    user.value = response.data
+    return response.data
+  }
+
+  /// Refetch /auth/me — useful after backgrounded actions might have changed
+  /// pending_email or email_verified state.
+  async function refreshMe(): Promise<User | null> {
+    try {
+      const response = await api.get<User>('/auth/me')
+      user.value = response.data
+      status.value = 'authed'
+      return response.data
+    } catch {
+      user.value = null
+      status.value = 'guest'
+      return null
+    }
+  }
+
   return {
     user,
     status,
@@ -129,5 +185,11 @@ export const useAuthStore = defineStore('auth', () => {
     resendVerification,
     login,
     logout,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    signOutAll,
+    updateProfile,
+    refreshMe,
   }
 })

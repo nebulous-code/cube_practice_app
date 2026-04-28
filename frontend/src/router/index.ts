@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
+import SettingsView from '../views/SettingsView.vue'
 import VerifyEmailView from '../views/VerifyEmailView.vue'
 import { useAuthStore } from '../stores/auth'
 
@@ -21,11 +24,24 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomeView, meta: { requiresAuth: true } },
+    { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
       meta: { guestOnly: true },
     },
     // Verify-email is reachable from both states: post-registration (no session yet)

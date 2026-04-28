@@ -15,11 +15,12 @@ use crate::auth::{
     password::{hash_password, verify_password},
     session::create_session,
 };
-use crate::email::{email_change_verification, verification, ResendClient};
+use crate::email::{email_change_verification, password_reset, verification, ResendClient};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
 const VERIFICATION_TTL_MINUTES: i64 = 10;
+const RESET_TTL_MINUTES: i64 = 60;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -28,7 +29,14 @@ pub fn router() -> Router<AppState> {
         .route("/auth/resend-verification", post(resend_verification))
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout))
-        .route("/auth/me", axum::routing::get(me))
+        .route("/auth/sign-out-all", post(sign_out_all))
+        .route("/auth/forgot-password", post(forgot_password))
+        .route("/auth/reset-password", post(reset_password))
+        .route("/auth/change-password", post(change_password))
+        .route(
+            "/auth/me",
+            axum::routing::get(me).patch(update_me),
+        )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -488,6 +496,345 @@ async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<MeR
 
     let (id, email, pending_email, display_name, email_verified) =
         row.ok_or(AppError::Unauthorized)?;
+
+    Ok(Json(MeResponse {
+        id,
+        email,
+        pending_email,
+        display_name,
+        email_verified,
+    }))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/sign-out-all
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct SignOutAllRequest {
+    current_password: String,
+}
+
+async fn sign_out_all(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    user: AuthUser,
+    Json(req): Json<SignOutAllRequest>,
+) -> AppResult<(CookieJar, Json<EmptyResponse>)> {
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
+            .bind(user.user_id)
+            .fetch_optional(&state.pool)
+            .await?;
+
+    let (password_hash,) = row.ok_or(AppError::Unauthorized)?;
+    if !verify_password(&req.current_password, &password_hash)? {
+        return Err(AppError::InvalidPassword);
+    }
+
+    sqlx::query("UPDATE sessions SET revoked = TRUE WHERE user_id = $1")
+        .bind(user.user_id)
+        .execute(&state.pool)
+        .await?;
+
+    tracing::info!(user_id = %user.user_id, "user signed out everywhere");
+
+    Ok((jar.add(clear_session_cookie()), Json(EmptyResponse {})))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/forgot-password
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordRequest {
+    email: String,
+}
+
+async fn forgot_password(
+    State(state): State<AppState>,
+    Json(req): Json<ForgotPasswordRequest>,
+) -> AppResult<Json<EmptyResponse>> {
+    let email = req.email.trim().to_lowercase();
+    if email.is_empty() {
+        let mut fields = HashMap::new();
+        fields.insert("email".into(), "Required.".into());
+        return Err(AppError::Validation(fields));
+    }
+
+    let row: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = $1")
+        .bind(&email)
+        .fetch_optional(&state.pool)
+        .await?;
+
+    if let Some((id,)) = row {
+        let code = six_digit_code();
+        let expires = Utc::now() + Duration::minutes(RESET_TTL_MINUTES);
+        sqlx::query(
+            r#"
+            UPDATE users
+            SET reset_code = $2, reset_code_expires = $3
+            WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .bind(&code)
+        .bind(expires)
+        .execute(&state.pool)
+        .await?;
+
+        let msg = password_reset(&code);
+        state
+            .email
+            .send(&email, &msg.subject, &msg.text, &msg.html)
+            .await?;
+    }
+    // Always return 200 — don't reveal whether the email is registered.
+    Ok(Json(EmptyResponse {}))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/reset-password
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordRequest {
+    email: String,
+    code: String,
+    new_password: String,
+}
+
+async fn reset_password(
+    State(state): State<AppState>,
+    Json(req): Json<ResetPasswordRequest>,
+) -> AppResult<Json<EmptyResponse>> {
+    let email = req.email.trim().to_lowercase();
+    let code = req.code.trim().to_string();
+
+    let mut fields: HashMap<String, String> = HashMap::new();
+    if email.is_empty() {
+        fields.insert("email".into(), "Required.".into());
+    }
+    if code.len() != 6 || !code.chars().all(|c| c.is_ascii_digit()) {
+        fields.insert("code".into(), "Enter the 6-digit code.".into());
+    }
+    if req.new_password.chars().count() < 8 {
+        fields.insert("new_password".into(), "Must be at least 8 characters.".into());
+    }
+    if !fields.is_empty() {
+        return Err(AppError::Validation(fields));
+    }
+
+    let row: Option<(Uuid, Option<String>, Option<DateTime<Utc>>)> = sqlx::query_as(
+        "SELECT id, reset_code, reset_code_expires FROM users WHERE email = $1",
+    )
+    .bind(&email)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let (id, stored_code, expires) = row.ok_or(AppError::InvalidCode)?;
+    let stored = stored_code.ok_or(AppError::InvalidCode)?;
+    let expires = expires.ok_or(AppError::InvalidCode)?;
+    if stored != code {
+        return Err(AppError::InvalidCode);
+    }
+    if expires <= Utc::now() {
+        return Err(AppError::CodeExpired);
+    }
+
+    let new_hash = hash_password(&req.new_password, state.argon2)?;
+
+    // Single transaction: store new password, clear reset code, revoke all sessions.
+    // Revoking on reset is the right security default — the previous password
+    // may be compromised, so any device still signed in needs to be kicked.
+    let mut tx = state.pool.begin().await?;
+    sqlx::query(
+        r#"
+        UPDATE users
+        SET password_hash = $2, reset_code = NULL, reset_code_expires = NULL
+        WHERE id = $1
+        "#,
+    )
+    .bind(id)
+    .bind(&new_hash)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("UPDATE sessions SET revoked = TRUE WHERE user_id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+
+    tracing::info!(user_id = %id, "password reset, all sessions revoked");
+
+    Ok(Json(EmptyResponse {}))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/change-password
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ChangePasswordRequest {
+    current_password: String,
+    new_password: String,
+}
+
+async fn change_password(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(req): Json<ChangePasswordRequest>,
+) -> AppResult<Json<EmptyResponse>> {
+    if req.new_password.chars().count() < 8 {
+        let mut fields = HashMap::new();
+        fields.insert("new_password".into(), "Must be at least 8 characters.".into());
+        return Err(AppError::Validation(fields));
+    }
+    if req.new_password == req.current_password {
+        let mut fields = HashMap::new();
+        fields.insert(
+            "new_password".into(),
+            "Must differ from your current password.".into(),
+        );
+        return Err(AppError::Validation(fields));
+    }
+
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
+            .bind(user.user_id)
+            .fetch_optional(&state.pool)
+            .await?;
+    let (current_hash,) = row.ok_or(AppError::Unauthorized)?;
+
+    if !verify_password(&req.current_password, &current_hash)? {
+        return Err(AppError::InvalidPassword);
+    }
+
+    let new_hash = hash_password(&req.new_password, state.argon2)?;
+    sqlx::query("UPDATE users SET password_hash = $2 WHERE id = $1")
+        .bind(user.user_id)
+        .bind(&new_hash)
+        .execute(&state.pool)
+        .await?;
+
+    tracing::info!(user_id = %user.user_id, "password changed");
+
+    Ok(Json(EmptyResponse {}))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /auth/me
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateMeRequest {
+    display_name: Option<String>,
+    email: Option<String>,
+}
+
+async fn update_me(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(req): Json<UpdateMeRequest>,
+) -> AppResult<Json<MeResponse>> {
+    let mut fields: HashMap<String, String> = HashMap::new();
+
+    if let Some(ref name) = req.display_name {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            fields.insert("display_name".into(), "Required.".into());
+        } else if trimmed.chars().count() > 80 {
+            fields.insert(
+                "display_name".into(),
+                "Must be 80 characters or fewer.".into(),
+            );
+        }
+    }
+    if let Some(ref email) = req.email {
+        let trimmed = email.trim();
+        if !is_email_shape(trimmed) {
+            fields.insert("email".into(), "Enter a valid email address.".into());
+        }
+    }
+    if !fields.is_empty() {
+        return Err(AppError::Validation(fields));
+    }
+
+    if let Some(name) = req.display_name.as_ref() {
+        sqlx::query("UPDATE users SET display_name = $2 WHERE id = $1")
+            .bind(user.user_id)
+            .bind(name.trim())
+            .execute(&state.pool)
+            .await?;
+    }
+
+    if let Some(email_raw) = req.email.as_ref() {
+        let new_email = email_raw.trim().to_lowercase();
+
+        // Look up current email so we can compare and clear pending if reverting.
+        let current: Option<(String,)> =
+            sqlx::query_as("SELECT email FROM users WHERE id = $1")
+                .bind(user.user_id)
+                .fetch_optional(&state.pool)
+                .await?;
+        let (current_email,) = current.ok_or(AppError::Unauthorized)?;
+
+        if new_email == current_email {
+            // User reverted; clear any pending change.
+            sqlx::query("UPDATE users SET pending_email = NULL WHERE id = $1")
+                .bind(user.user_id)
+                .execute(&state.pool)
+                .await?;
+        } else {
+            // Reject if some other user already has this email.
+            let collision: Option<(Uuid,)> = sqlx::query_as(
+                "SELECT id FROM users WHERE email = $1 AND id <> $2",
+            )
+            .bind(&new_email)
+            .bind(user.user_id)
+            .fetch_optional(&state.pool)
+            .await?;
+            if collision.is_some() {
+                return Err(AppError::EmailInUse);
+            }
+
+            let code = six_digit_code();
+            let expires = Utc::now() + Duration::minutes(VERIFICATION_TTL_MINUTES);
+            sqlx::query(
+                r#"
+                UPDATE users
+                SET pending_email = $2,
+                    verification_code = $3,
+                    verification_code_expires = $4
+                WHERE id = $1
+                "#,
+            )
+            .bind(user.user_id)
+            .bind(&new_email)
+            .bind(&code)
+            .bind(expires)
+            .execute(&state.pool)
+            .await?;
+
+            let msg = email_change_verification(&code, &new_email);
+            state
+                .email
+                .send(&new_email, &msg.subject, &msg.text, &msg.html)
+                .await?;
+        }
+    }
+
+    // Re-read and return the canonical record.
+    let row: Option<(Uuid, String, Option<String>, String, bool)> = sqlx::query_as(
+        "SELECT id, email, pending_email, display_name, email_verified FROM users WHERE id = $1",
+    )
+    .bind(user.user_id)
+    .fetch_optional(&state.pool)
+    .await?;
+    let (id, email, pending_email, display_name, email_verified) =
+        row.ok_or(AppError::Unauthorized)?;
+
+    tracing::info!(user_id = %id, "profile updated");
 
     Ok(Json(MeResponse {
         id,
