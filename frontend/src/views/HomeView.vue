@@ -1,21 +1,34 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 
+import { useAuthStore } from '@/stores/auth'
+
 const router = useRouter()
+const auth = useAuthStore()
+
+async function onSignOut() {
+  await auth.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
   <main class="placeholder">
     <div class="card">
       <p class="eyebrow">Milestone 1</p>
-      <h1>Cube Practice — scaffolding</h1>
+      <h1>Hi, {{ auth.user?.display_name ?? 'there' }}.</h1>
       <p class="body">
-        Auth flows are landing this milestone. Practice, cases, and progress views come online
-        in milestones 2&ndash;4.
+        You're signed in. Practice, cases, and progress views come online in milestones
+        2&ndash;4.
+      </p>
+      <p v-if="auth.user" class="meta">
+        Signed in as <span class="mono">{{ auth.user.email }}</span>
+        <span v-if="auth.user.pending_email">
+          &middot; pending change to <span class="mono">{{ auth.user.pending_email }}</span>
+        </span>
       </p>
       <div class="actions">
-        <button class="link" type="button" @click="router.push('/register')">Create an account →</button>
-        <button class="link muted" type="button" @click="router.push('/login')">Sign in</button>
+        <button class="signout" type="button" @click="onSignOut">Sign out</button>
       </div>
     </div>
   </main>
@@ -61,29 +74,35 @@ h1 {
   font-style: italic;
   color: var(--paper-ink-muted);
   line-height: 1.5;
+  margin: 0 0 var(--space-4);
+}
+
+.meta {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--paper-ink-faint);
   margin: 0 0 var(--space-6);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  color: var(--paper-ink-muted);
 }
 
 .actions {
   display: flex;
   gap: var(--space-4);
-  flex-wrap: wrap;
 }
 
-.link {
-  background: none;
-  border: none;
-  padding: 0;
+.signout {
+  background: transparent;
+  color: var(--paper-error);
+  border: 1px solid var(--paper-rule);
+  border-radius: 12px;
+  padding: 10px 16px;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
-  color: var(--paper-accent);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.link.muted {
-  color: var(--paper-ink-muted);
 }
 </style>

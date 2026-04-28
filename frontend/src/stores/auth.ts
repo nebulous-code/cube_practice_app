@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { api } from '@/api/client'
+import { ApiError, api } from '@/api/client'
 
 export interface User {
   id: string
@@ -39,6 +39,33 @@ export const useAuthStore = defineStore('auth', () => {
   /// VerifyEmail screen knows where the code was sent.
   const pendingVerificationEmail = ref<string | null>(null)
 
+  /// Bootstrap promise — guarantees we only fetch /auth/me once on initial
+  /// page load and that everyone (App.vue, router guard) waits on the same
+  /// inflight request.
+  let bootstrapPromise: Promise<void> | null = null
+
+  function bootstrap(): Promise<void> {
+    if (bootstrapPromise) return bootstrapPromise
+    bootstrapPromise = (async () => {
+      const startedAt = Date.now()
+      try {
+        const response = await api.get<User>('/auth/me')
+        user.value = response.data
+        status.value = 'authed'
+      } catch {
+        user.value = null
+        status.value = 'guest'
+      }
+
+      // Splash holds for at least 800ms so it doesn't flicker on a fast response.
+      const elapsed = Date.now() - startedAt
+      if (elapsed < 800) {
+        await new Promise((resolve) => setTimeout(resolve, 800 - elapsed))
+      }
+    })()
+    return bootstrapPromise
+  }
+
   async function register(payload: RegisterPayload): Promise<RegisterResponse> {
     const response = await api.post<RegisterResponse>('/auth/register', payload)
     pendingVerificationEmail.value = response.data.email
@@ -65,12 +92,42 @@ export const useAuthStore = defineStore('auth', () => {
     await api.post('/auth/resend-verification', body)
   }
 
+  async function login(email: string, password: string): Promise<User> {
+    try {
+      const response = await api.post<User>('/auth/login', { email, password })
+      user.value = response.data
+      status.value = 'authed'
+      return response.data
+    } catch (err) {
+      // If the account is unverified, surface the email so the verify screen
+      // can show "we sent it to <x>" without forcing the user to retype it.
+      if (err instanceof ApiError && err.code === 'email_not_verified') {
+        pendingVerificationEmail.value = email
+      }
+      throw err
+    }
+  }
+
+  async function logout(): Promise<void> {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Even if the server-side revoke fails, clear local state — the cookie is
+      // either already gone or about to be.
+    }
+    user.value = null
+    status.value = 'guest'
+  }
+
   return {
     user,
     status,
     pendingVerificationEmail,
+    bootstrap,
     register,
     verifyEmail,
     resendVerification,
+    login,
+    logout,
   }
 })

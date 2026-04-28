@@ -10,8 +10,9 @@ use uuid::Uuid;
 
 use crate::auth::{
     code::six_digit_code,
+    cookie::clear_session_cookie,
     extractor::AuthUser,
-    password::hash_password,
+    password::{hash_password, verify_password},
     session::create_session,
 };
 use crate::email::{email_change_verification, verification, ResendClient};
@@ -25,6 +26,9 @@ pub fn router() -> Router<AppState> {
         .route("/auth/register", post(register))
         .route("/auth/verify-email", post(verify_email))
         .route("/auth/resend-verification", post(resend_verification))
+        .route("/auth/login", post(login))
+        .route("/auth/logout", post(logout))
+        .route("/auth/me", axum::routing::get(me))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -387,6 +391,111 @@ async fn issue_new_code(pool: &sqlx::PgPool, user_id: Uuid) -> AppResult<String>
     .execute(pool)
     .await?;
     Ok(code)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/login
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct LoginRequest {
+    email: String,
+    password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    id: Uuid,
+    email: String,
+    display_name: String,
+}
+
+async fn login(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Json(req): Json<LoginRequest>,
+) -> AppResult<(CookieJar, Json<LoginResponse>)> {
+    let email = req.email.trim().to_lowercase();
+
+    let row: Option<(Uuid, String, String, String, bool)> = sqlx::query_as(
+        "SELECT id, email, display_name, password_hash, email_verified FROM users WHERE email = $1",
+    )
+    .bind(&email)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let (id, email, display_name, password_hash, email_verified) =
+        row.ok_or(AppError::InvalidCredentials)?;
+
+    if !verify_password(&req.password, &password_hash)? {
+        return Err(AppError::InvalidCredentials);
+    }
+    if !email_verified {
+        return Err(AppError::EmailNotVerified);
+    }
+
+    let session = create_session(&state.pool, id, &state.config.jwt_secret).await?;
+
+    tracing::info!(user_id = %id, "user signed in");
+
+    Ok((
+        jar.add(session.cookie),
+        Json(LoginResponse {
+            id,
+            email,
+            display_name,
+        }),
+    ))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/logout
+// ─────────────────────────────────────────────────────────────────────────────
+
+async fn logout(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    user: AuthUser,
+) -> AppResult<(CookieJar, Json<EmptyResponse>)> {
+    sqlx::query("UPDATE sessions SET revoked = TRUE WHERE id = $1")
+        .bind(user.session_id)
+        .execute(&state.pool)
+        .await?;
+
+    Ok((jar.add(clear_session_cookie()), Json(EmptyResponse {})))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /auth/me
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct MeResponse {
+    id: Uuid,
+    email: String,
+    pending_email: Option<String>,
+    display_name: String,
+    email_verified: bool,
+}
+
+async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<MeResponse>> {
+    let row: Option<(Uuid, String, Option<String>, String, bool)> = sqlx::query_as(
+        "SELECT id, email, pending_email, display_name, email_verified FROM users WHERE id = $1",
+    )
+    .bind(user.user_id)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let (id, email, pending_email, display_name, email_verified) =
+        row.ok_or(AppError::Unauthorized)?;
+
+    Ok(Json(MeResponse {
+        id,
+        email,
+        pending_email,
+        display_name,
+        email_verified,
+    }))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
