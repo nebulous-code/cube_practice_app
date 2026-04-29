@@ -327,7 +327,7 @@ A literal QA script. M2 is closed when every line passes against `https://cube.n
 Pairs backend + frontend per the user's principle: avoid landing endpoints with no UI. Stories are checked off as they ship.
 
 ### Test infrastructure
-- [ ] **B0.** sqlx integration-test harness — `backend/tests/common/db.rs` provisions a per-test database (template-DB clone or randomly-named create), runs migrations, returns a `PgPool`, and tears down on `Drop`. Reads `TEST_DATABASE_URL` env var. One smoke test that connects + migrates + checks `SELECT 1`. Unblocks every B1+ test below and persists for future milestones.
+- [x] **B0.** sqlx integration-test harness — `backend/tests/common/mod.rs` provisions a per-test randomly-named database, runs migrations, returns a `PgPool`, and tears down on `Drop` (via a one-shot tokio runtime in a worker thread). Reads `TEST_DATABASE_URL` (refuses to fall back to `DATABASE_URL`). Smoke test in `backend/tests/db_harness.rs` connects, migrates, queries the `users` and `sessions` tables. Unblocks every B1+ test below and persists for future milestones.
 
 ### Schema + seed
 - [ ] **B1.** Migration `0002_cases.sql` — `puzzle_types`, `solve_stages`, `cases`, `user_case_settings`, shared `updated_at` trigger function. Includes constraints listed in §3.
