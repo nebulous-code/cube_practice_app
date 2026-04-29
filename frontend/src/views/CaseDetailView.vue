@@ -287,20 +287,12 @@ async function onStartStudying() {
       </section>
 
       <button
-        v-if="!editing && current.state === 'not_started'"
+        v-if="!editing"
         type="button"
         class="cta primary"
         @click="onStartStudying"
       >
-        Start studying
-      </button>
-      <button
-        v-else-if="!editing && current.state === 'due'"
-        type="button"
-        class="cta primary"
-        @click="onStartStudying"
-      >
-        Practice now
+        {{ current.state === 'not_started' ? 'Start studying' : 'Practice now' }}
       </button>
 
       <!-- Pattern + tags -->
