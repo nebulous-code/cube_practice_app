@@ -276,10 +276,10 @@ function pad2(n: number): string {
       <section class="card meta-card">
         <PatternDiagram :pattern="current.pattern" :size="120" />
         <div class="meta">
-          <p class="section-eyebrow">Tier 1</p>
+          <p class="section-eyebrow">Primary shape</p>
           <p class="meta-value">{{ TIER1_LABELS[current.tier1_tag] ?? current.tier1_tag }}</p>
 
-          <p class="section-eyebrow">Tier 2</p>
+          <p class="section-eyebrow">Tags</p>
           <p v-if="!editing" class="meta-value">{{ tier2Label(current.tier2_tag) }}</p>
           <input
             v-else

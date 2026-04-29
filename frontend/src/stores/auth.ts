@@ -7,6 +7,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { ApiError, api } from '@/api/client'
+import { useCasesStore } from '@/stores/cases'
+
+/// Wipe every store that caches data scoped to the current user. Called
+/// on every login/logout/sign-out-all/verify boundary so a second user
+/// signing into the same browser never sees the previous user's cache.
+function resetUserScopedStores() {
+  useCasesStore().$reset()
+}
 
 export interface User {
   id: string
@@ -79,6 +87,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (email) body.email = email
 
     const response = await api.post<User>('/auth/verify-email', body)
+    const wasAuthed = status.value === 'authed'
+    // Initial registration verify is also the moment a new user becomes
+    // signed in, so flush any cached data from a previous session here too.
+    if (!wasAuthed) resetUserScopedStores()
     user.value = response.data
     status.value = 'authed'
     pendingVerificationEmail.value = null
@@ -95,6 +107,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password: string): Promise<User> {
     try {
       const response = await api.post<User>('/auth/login', { email, password })
+      // Wipe any cached data from a previous session before the new user's
+      // first request hits the API.
+      resetUserScopedStores()
       user.value = response.data
       status.value = 'authed'
       return response.data
@@ -117,6 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     user.value = null
     status.value = 'guest'
+    resetUserScopedStores()
   }
 
   async function forgotPassword(email: string): Promise<void> {
@@ -149,6 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
     await api.post('/auth/sign-out-all', { current_password: currentPassword })
     user.value = null
     status.value = 'guest'
+    resetUserScopedStores()
   }
 
   async function updateProfile(payload: {
