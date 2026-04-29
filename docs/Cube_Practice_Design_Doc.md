@@ -27,6 +27,7 @@ A web-based spaced repetition flashcard app for Rubik's cube algorithm practice.
 - Admin panel
 - Public case browser (no login required)
 - Dark mode
+- **Per-user timezone + local-midnight rollover** for streak/due-date comparisons. MVP uses server UTC date for "today" — a user in PST sees streaks tick at 5 PM Pacific (00:00 UTC). Post-MVP: store `users.timezone`, roll over at user-local midnight. Two reviews near UTC midnight currently can fall on different "today" values; that goes away with per-user rollover.
 
 ### Out of Scope (MVP)
 - Native mobile app

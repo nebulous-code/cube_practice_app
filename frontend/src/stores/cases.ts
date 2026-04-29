@@ -10,6 +10,8 @@ import { computed, ref } from 'vue'
 
 import { api } from '@/api/client'
 
+export type CaseState = 'not_started' | 'learning' | 'due' | 'mastered'
+
 export interface Case {
   id: string
   solve_stage: string
@@ -24,6 +26,7 @@ export interface Case {
   tier1_tag: '+' | '-' | 'L' | '*'
   tier2_tag: string | null
   has_overrides: boolean
+  state: CaseState
 }
 
 export type CasesStatus = 'idle' | 'loading' | 'ready' | 'error'

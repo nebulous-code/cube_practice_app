@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import CaseStatePip from '@/components/CaseStatePip.vue'
 import PatternDiagram from '@/components/PatternDiagram.vue'
 import { type Case, useCasesStore } from '@/stores/cases'
 
@@ -147,7 +148,10 @@ function pad2(n: number): string {
           class="tile"
           @click="goCase(c.id)"
         >
-          <PatternDiagram :pattern="c.pattern" :size="90" />
+          <div class="tile-pattern">
+            <PatternDiagram :pattern="c.pattern" :size="90" />
+            <CaseStatePip :state="c.state" class="tile-pip" />
+          </div>
           <p class="tile-num">Case {{ pad2(c.case_number) }}</p>
           <p v-if="c.nickname" class="tile-name">{{ c.nickname }}</p>
         </button>
@@ -317,6 +321,19 @@ function pad2(n: number): string {
 
 .tile:hover {
   border-color: var(--paper-rule);
+}
+
+.tile-pattern {
+  position: relative;
+}
+
+.tile-pip {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--paper-card);
+  border-radius: 50%;
+  padding: 1px;
 }
 
 .tile-num {

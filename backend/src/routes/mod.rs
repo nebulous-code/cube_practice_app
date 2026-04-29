@@ -1,5 +1,6 @@
 mod auth;
 mod cases;
+mod study;
 
 use axum::{routing::get, Json, Router};
 use serde_json::json;
@@ -11,6 +12,7 @@ pub fn router() -> Router<AppState> {
         .route("/health", get(health))
         .merge(auth::router())
         .merge(cases::router())
+        .merge(study::router())
 }
 
 async fn health() -> Json<serde_json::Value> {

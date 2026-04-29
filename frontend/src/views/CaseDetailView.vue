@@ -3,13 +3,16 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '@/api/client'
+import CaseStatePip from '@/components/CaseStatePip.vue'
 import PatternDiagram from '@/components/PatternDiagram.vue'
 import { rotatePattern } from '@/lib/pattern'
 import { type Case, type SettingsPatch, useCasesStore } from '@/stores/cases'
+import { useStudyStore } from '@/stores/study'
 
 const route = useRoute()
 const router = useRouter()
 const cases = useCasesStore()
+const study = useStudyStore()
 
 const ROUTE_ID = computed(() => String(route.params.id ?? ''))
 
@@ -224,6 +227,14 @@ function goBack() {
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
+
+async function onStartStudying() {
+  if (!current.value) return
+  // Make sure the case is in casesStore so studyStore can find it.
+  await cases.ensureLoaded()
+  if (!study.startSingle(current.value.id)) return
+  router.push('/study')
+}
 </script>
 
 <template>
@@ -270,7 +281,27 @@ function pad2(n: number): string {
           placeholder="Give it a nickname…"
           maxlength="80"
         />
+        <div v-if="!editing" class="state-row">
+          <CaseStatePip :state="current.state" :show-label="true" />
+        </div>
       </section>
+
+      <button
+        v-if="!editing && current.state === 'not_started'"
+        type="button"
+        class="cta primary"
+        @click="onStartStudying"
+      >
+        Start studying
+      </button>
+      <button
+        v-else-if="!editing && current.state === 'due'"
+        type="button"
+        class="cta primary"
+        @click="onStartStudying"
+      >
+        Practice now
+      </button>
 
       <!-- Pattern + tags -->
       <section class="card meta-card">
@@ -438,6 +469,28 @@ function pad2(n: number): string {
 
 .title-row {
   margin: 18px 0 14px;
+}
+
+.state-row {
+  margin-top: 8px;
+}
+
+.cta {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 13px;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--paper-ink);
+  background: var(--paper-ink);
+  color: var(--paper-bg);
+}
+
+.cta:hover {
+  opacity: 0.92;
 }
 
 .eyebrow {

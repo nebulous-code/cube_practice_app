@@ -8,12 +8,14 @@ import { ref } from 'vue'
 
 import { ApiError, api } from '@/api/client'
 import { useCasesStore } from '@/stores/cases'
+import { useStudyStore } from '@/stores/study'
 
 /// Wipe every store that caches data scoped to the current user. Called
 /// on every login/logout/sign-out-all/verify boundary so a second user
 /// signing into the same browser never sees the previous user's cache.
 function resetUserScopedStores() {
   useCasesStore().$reset()
+  useStudyStore().$reset()
 }
 
 export interface User {

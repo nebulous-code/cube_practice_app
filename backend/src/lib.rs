@@ -15,7 +15,9 @@ pub mod db;
 pub mod email;
 pub mod error;
 pub mod routes;
+pub mod srs;
 pub mod state;
+pub mod study;
 
 use crate::config::Config;
 use crate::state::AppState;

@@ -30,6 +30,29 @@ pub struct Case {
     pub tier1_tag: String,
     pub tier2_tag: Option<String>,
     pub has_overrides: bool,
+    /// Per-user SM-2 state — see docs/milestones/03_core_study_loop.md §3.
+    pub state: CaseState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CaseState {
+    NotStarted,
+    Due,
+    Learning,
+    Mastered,
+}
+
+impl CaseState {
+    fn from_sql(s: &str) -> Self {
+        match s {
+            "not_started" => CaseState::NotStarted,
+            "due" => CaseState::Due,
+            "learning" => CaseState::Learning,
+            "mastered" => CaseState::Mastered,
+            other => panic!("unexpected state from SQL: {other}"),
+        }
+    }
 }
 
 /// Internal row shape returned by the merge SQL. Stays private so the
@@ -49,6 +72,7 @@ struct MergedRow {
     tier1_tag: String,
     tier2_tag: Option<String>,
     has_overrides: bool,
+    state: String,
     #[allow(dead_code)]
     case_created_at: DateTime<Utc>,
 }
@@ -78,6 +102,7 @@ impl MergedRow {
             tier1_tag: self.tier1_tag,
             tier2_tag: self.tier2_tag,
             has_overrides: self.has_overrides,
+            state: CaseState::from_sql(&self.state),
         }
     }
 }
@@ -86,7 +111,9 @@ impl MergedRow {
 /// in `user_case_settings` falls through to the global `cases` value.
 /// `has_overrides` is true when an override row exists for this user/case.
 /// `result_case_number` is denormalized from the merged result-case for
-/// the detail view's "Case 02" label.
+/// the detail view's "Case 02" label. `state` derives the SM-2 state from
+/// the LEFT JOIN to `user_case_progress` (21-day threshold for mastered
+/// per outstanding_decision.md §1.3).
 const MERGE_SELECT: &str = r#"
 SELECT
     c.id                                                  AS id,
@@ -102,12 +129,20 @@ SELECT
     c.tier1_tag                                           AS tier1_tag,
     COALESCE(ucs.tier2_tag,       c.tier2_tag)            AS tier2_tag,
     (ucs.id IS NOT NULL)                                  AS has_overrides,
+    CASE
+        WHEN ucp.id IS NULL                  THEN 'not_started'
+        WHEN ucp.due_date <= CURRENT_DATE    THEN 'due'
+        WHEN ucp.interval_days < 21          THEN 'learning'
+        ELSE                                      'mastered'
+    END                                                   AS state,
     c.created_at                                          AS case_created_at
 FROM cases c
 JOIN solve_stages s   ON s.id  = c.solve_stage_id
 JOIN puzzle_types pt  ON pt.id = s.puzzle_type_id
 LEFT JOIN user_case_settings ucs
        ON ucs.case_id = c.id AND ucs.user_id = $1
+LEFT JOIN user_case_progress ucp
+       ON ucp.case_id = c.id AND ucp.user_id = $1
 LEFT JOIN cases rc
        ON rc.id = COALESCE(ucs.result_case_id, c.result_case_id)
 "#;
@@ -116,6 +151,20 @@ LEFT JOIN cases rc
 /// case_number ascending.
 pub async fn list_for_user(pool: &PgPool, user_id: Uuid) -> AppResult<Vec<Case>> {
     let sql = format!("{MERGE_SELECT} ORDER BY c.case_number ASC");
+    let rows: Vec<MergedRow> = sqlx::query_as(&sql)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
+    Ok(rows.into_iter().map(MergedRow::into_api).collect())
+}
+
+/// Fetch only cases currently in the `due` state for the user. Sorted by
+/// `due_date` ascending so the oldest-due cards come first in the queue.
+pub async fn list_due_for_user(pool: &PgPool, user_id: Uuid) -> AppResult<Vec<Case>> {
+    let sql = format!(
+        "{MERGE_SELECT} WHERE ucp.id IS NOT NULL AND ucp.due_date <= CURRENT_DATE \
+         ORDER BY ucp.due_date ASC, c.case_number ASC"
+    );
     let rows: Vec<MergedRow> = sqlx::query_as(&sql)
         .bind(user_id)
         .fetch_all(pool)

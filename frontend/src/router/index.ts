@@ -7,12 +7,13 @@ import CaseDetailView from '../views/CaseDetailView.vue'
 import CasesView from '../views/CasesView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import LoginView from '../views/LoginView.vue'
-import PracticeStubView from '../views/PracticeStubView.vue'
+import PracticeView from '../views/PracticeView.vue'
 import PrivacyView from '../views/PrivacyView.vue'
 import ProgressStubView from '../views/ProgressStubView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import StudySessionView from '../views/StudySessionView.vue'
 import TermsView from '../views/TermsView.vue'
 import VerifyEmailView from '../views/VerifyEmailView.vue'
 import { useAuthStore } from '../stores/auth'
@@ -39,13 +40,16 @@ const router = createRouter({
       component: AppShell,
       meta: { requiresAuth: true },
       children: [
-        { path: '', name: 'practice', component: PracticeStubView },
+        { path: '', name: 'practice', component: PracticeView },
         { path: 'cases', name: 'cases', component: CasesView },
         { path: 'progress', name: 'progress', component: ProgressStubView },
       ],
     },
     // Settings is full-bleed — no tab bar, has its own back button.
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
+
+    // Study session is full-bleed — full attention on the card.
+    { path: '/study', name: 'study', component: StudySessionView, meta: { requiresAuth: true } },
 
     // Case detail is also full-bleed (per outstanding_decision.md §1.5) so
     // the user can focus on the algorithm + result preview without the tab

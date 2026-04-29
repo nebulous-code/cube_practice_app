@@ -4,7 +4,7 @@
 mod common;
 
 use common::TestDb;
-use cube_backend::cases;
+use cube_backend::cases::{self, CaseState};
 use uuid::Uuid;
 
 #[tokio::test]
@@ -22,6 +22,7 @@ async fn lists_all_57_cases_with_no_overrides() {
         assert_eq!(case.puzzle_type, "3x3");
         assert!(!case.has_overrides);
         assert_eq!(case.pattern.len(), 9, "pattern should be 9 chars");
+        assert_eq!(case.state, CaseState::NotStarted);
     }
 
     // Sorted by case_number ASC.
@@ -149,6 +150,66 @@ async fn get_for_user_returns_not_found_for_unknown_id() {
         .await
         .expect_err("should be not found");
     assert!(matches!(err, cube_backend::error::AppError::NotFound));
+}
+
+#[tokio::test]
+async fn state_due_when_due_date_in_past() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    sqlx::query(
+        "INSERT INTO user_case_progress (user_id, case_id, due_date, interval_days, repetitions) \
+         VALUES ($1, $2, CURRENT_DATE - 1, 5, 2)",
+    )
+    .bind(user)
+    .bind(case)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+
+    let merged = cases::get_for_user(&db.pool, user, case).await.unwrap();
+    assert_eq!(merged.state, CaseState::Due);
+}
+
+#[tokio::test]
+async fn state_learning_when_due_future_and_interval_under_21() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    sqlx::query(
+        "INSERT INTO user_case_progress (user_id, case_id, due_date, interval_days, repetitions) \
+         VALUES ($1, $2, CURRENT_DATE + 5, 6, 2)",
+    )
+    .bind(user)
+    .bind(case)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+
+    let merged = cases::get_for_user(&db.pool, user, case).await.unwrap();
+    assert_eq!(merged.state, CaseState::Learning);
+}
+
+#[tokio::test]
+async fn state_mastered_when_due_future_and_interval_at_or_above_21() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    sqlx::query(
+        "INSERT INTO user_case_progress (user_id, case_id, due_date, interval_days, repetitions) \
+         VALUES ($1, $2, CURRENT_DATE + 30, 21, 5)",
+    )
+    .bind(user)
+    .bind(case)
+    .execute(&db.pool)
+    .await
+    .unwrap();
+
+    let merged = cases::get_for_user(&db.pool, user, case).await.unwrap();
+    assert_eq!(merged.state, CaseState::Mastered);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

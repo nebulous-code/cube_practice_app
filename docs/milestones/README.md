@@ -83,13 +83,13 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 **Done when:**
 - Dashboard shows streak, due-today, learning/mastered counts, quick-start CTA
 - `/progress` shows the per-case breakdown with state filters (`not_started` / `learning` / `due` / `mastered`)
-- Free study mode runs with all four filter axes (Tier 1, Tier 2, user tag, status)
-- User-defined tags: create / delete / apply / remove, all from the case-detail screen
+- Free study mode runs with the filter axes (primary shape, tags, status)
+- **Tag rework:** the single-string `tier2_tag` collapses into a multi-valued `tags TEXT[]` on `cases` and `user_case_settings`. Tags are user-overridable, free-form, normalized (lowercase + trim + dedupe) on write. Detail view input is comma-separated; cases browser switches from grouped-by-Tier-2 to a flat list with chip filtering by any-of selected tags. The originally-planned `tags` + `case_tags` junction tables are dropped in favor of the array column — one mechanism, one place.
 - "Stats over time" skeleton renders a "coming soon" panel on `/progress`
 
-**Backend:** `GET /progress` (with the stats fields per item E of the auth decisions doc), `GET /progress/cases`, `GET /study/free`, full `/tags` and `/cases/:id/tags` CRUD.
+**Backend:** `GET /progress` (with the stats fields per item E of the auth decisions doc), `GET /progress/cases`, `GET /study/free`, schema migration converting `tier2_tag TEXT` → `tags TEXT[]` (backfill the single value as a one-element array), update merge SQL + `update_settings` to handle arrays.
 
-**Frontend:** Dashboard, Progress view, Free Study view + filter UI, Tags UI on case detail, stats skeleton.
+**Frontend:** Dashboard, Progress view, Free Study view + filter UI, tag input/chip rendering on case detail, browser tag filter, stats skeleton.
 
 **Out of scope:** Static pages, guest mode, polish/empty states.
 
