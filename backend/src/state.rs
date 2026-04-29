@@ -6,6 +6,7 @@
 use sqlx::PgPool;
 
 use crate::auth::password::Argon2Config;
+use crate::auth::rate_limit::RateLimiter;
 use crate::auth::recaptcha::RecaptchaVerifier;
 use crate::config::Config;
 use crate::email::ResendClient;
@@ -17,6 +18,7 @@ pub struct AppState {
     pub argon2: Argon2Config,
     pub email: ResendClient,
     pub recaptcha: RecaptchaVerifier,
+    pub rate_limit: RateLimiter,
 }
 
 impl AppState {
@@ -33,6 +35,7 @@ impl AppState {
             argon2,
             email,
             recaptcha,
+            rate_limit: RateLimiter::new(),
         }
     }
 }

@@ -1,11 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import AboutView from '../views/AboutView.vue'
+import AcknowledgementsView from '../views/AcknowledgementsView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import PrivacyView from '../views/PrivacyView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import TermsView from '../views/TermsView.vue'
 import VerifyEmailView from '../views/VerifyEmailView.vue'
 import { useAuthStore } from '../stores/auth'
 
@@ -47,6 +51,15 @@ const router = createRouter({
     // Verify-email is reachable from both states: post-registration (no session yet)
     // and during an email change (session present). No meta — the view handles both.
     { path: '/verify-email', name: 'verify-email', component: VerifyEmailView },
+    // Public static pages — placeholder content until launch.
+    { path: '/about', name: 'about', component: AboutView },
+    { path: '/terms', name: 'terms', component: TermsView },
+    { path: '/privacy', name: 'privacy', component: PrivacyView },
+    {
+      path: '/acknowledgements',
+      name: 'acknowledgements',
+      component: AcknowledgementsView,
+    },
   ],
 })
 

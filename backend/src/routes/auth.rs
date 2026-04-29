@@ -1,8 +1,9 @@
 //! Auth endpoints. See `docs/milestones/01_auth_and_accounts.md` §4.
 
 use std::collections::HashMap;
+use std::time::Duration as StdDuration;
 
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{extract::State, http::HeaderMap, routing::post, Json, Router};
 use axum_extra::extract::cookie::CookieJar;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ use crate::auth::{
     cookie::clear_session_cookie,
     extractor::AuthUser,
     password::{hash_password, verify_password},
+    rate_limit::RateLimiter,
     session::create_session,
 };
 use crate::email::{email_change_verification, password_reset, verification, ResendClient};
@@ -21,6 +23,12 @@ use crate::state::AppState;
 
 const VERIFICATION_TTL_MINUTES: i64 = 10;
 const RESET_TTL_MINUTES: i64 = 60;
+
+// Rate-limit windows. Documented in `docs/milestones/01_auth_and_accounts.md` §4.
+const REGISTER_PER_IP: (usize, StdDuration) = (10, StdDuration::from_secs(60 * 60));
+const LOGIN_PER_IP: (usize, StdDuration) = (20, StdDuration::from_secs(60));
+const RESEND_PER_KEY: (usize, StdDuration) = (1, StdDuration::from_secs(60));
+const FORGOT_PER_EMAIL: (usize, StdDuration) = (3, StdDuration::from_secs(60 * 60));
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -64,8 +72,16 @@ pub struct RegisterResponse {
 
 async fn register(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<RegisterRequest>,
 ) -> AppResult<Json<RegisterResponse>> {
+    let ip = client_ip(&headers);
+    enforce_limit(
+        &state.rate_limit,
+        &format!("register:ip:{ip}"),
+        REGISTER_PER_IP,
+    )?;
+
     let display_name = req.display_name.trim().to_string();
     let email = req.email.trim().to_lowercase();
 
@@ -314,9 +330,12 @@ async fn resend_verification(
     auth_user: Option<AuthUser>,
     Json(req): Json<ResendVerificationRequest>,
 ) -> AppResult<Json<EmptyResponse>> {
-    // TODO: rate-limit 1/min per user once B9 lands.
-
     if let Some(user) = auth_user {
+        enforce_limit(
+            &state.rate_limit,
+            &format!("resend:user:{}", user.user_id),
+            RESEND_PER_KEY,
+        )?;
         resend_for_user(&state, user.user_id).await?;
     } else {
         let email = req
@@ -329,6 +348,11 @@ async fn resend_verification(
                 fields.insert("email".into(), "Required.".into());
                 AppError::Validation(fields)
             })?;
+        enforce_limit(
+            &state.rate_limit,
+            &format!("resend:email:{email}"),
+            RESEND_PER_KEY,
+        )?;
         resend_for_email(&state, &email).await?;
     }
 
@@ -420,9 +444,13 @@ pub struct LoginResponse {
 
 async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     jar: CookieJar,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(CookieJar, Json<LoginResponse>)> {
+    let ip = client_ip(&headers);
+    enforce_limit(&state.rate_limit, &format!("login:ip:{ip}"), LOGIN_PER_IP)?;
+
     let email = req.email.trim().to_lowercase();
 
     let row: Option<(Uuid, String, String, String, bool)> = sqlx::query_as(
@@ -561,6 +589,12 @@ async fn forgot_password(
         fields.insert("email".into(), "Required.".into());
         return Err(AppError::Validation(fields));
     }
+
+    enforce_limit(
+        &state.rate_limit,
+        &format!("forgot:email:{email}"),
+        FORGOT_PER_EMAIL,
+    )?;
 
     let row: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = $1")
         .bind(&email)
@@ -899,6 +933,38 @@ fn is_unique_violation(err: &sqlx::Error) -> bool {
 async fn send_verification_email(email: &ResendClient, to: &str, code: &str) -> AppResult<()> {
     let msg = verification(code);
     email.send(to, &msg.subject, &msg.text, &msg.html).await
+}
+
+/// Best-effort client IP. Behind Render (and most reverse proxies) the
+/// originating address shows up in `X-Forwarded-For`; the leftmost entry is
+/// the real client. Falls back to `"unknown"` so the limiter still has a key
+/// (worst case: all unknown-IP requests share a bucket).
+fn client_ip(headers: &HeaderMap) -> String {
+    if let Some(value) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+        if let Some(first) = value.split(',').next() {
+            let trimmed = first.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_string();
+            }
+        }
+    }
+    if let Some(value) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    "unknown".to_string()
+}
+
+fn enforce_limit(
+    limiter: &RateLimiter,
+    key: &str,
+    (limit, window): (usize, StdDuration),
+) -> AppResult<()> {
+    limiter
+        .check(key, limit, window)
+        .map_err(|retry_after| AppError::RateLimited { retry_after })
 }
 
 #[cfg(test)]

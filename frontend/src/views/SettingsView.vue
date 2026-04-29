@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
 import Field from '@/components/auth/Field.vue'
@@ -216,6 +216,17 @@ function goBack() {
       </button>
     </section>
 
+    <!-- About / legal -->
+    <section class="card">
+      <p class="section-eyebrow">About</p>
+      <nav class="legal-links">
+        <RouterLink to="/about">About Cube Practice</RouterLink>
+        <RouterLink to="/terms">Terms of Service</RouterLink>
+        <RouterLink to="/privacy">Privacy Policy</RouterLink>
+        <RouterLink to="/acknowledgements">Acknowledgements</RouterLink>
+      </nav>
+    </section>
+
     <!-- Sign out / Sign out everywhere -->
     <section class="card">
       <p class="section-eyebrow">Sessions</p>
@@ -394,5 +405,23 @@ h1 {
 .confirm-actions .ghost,
 .confirm-actions .danger {
   margin-bottom: 0;
+}
+
+.legal-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-links a {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--paper-ink);
+  text-decoration: none;
+}
+
+.legal-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 </style>

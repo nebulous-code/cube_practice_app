@@ -368,7 +368,7 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - [ ] **B6.** Resend client wrapper (REST via `reqwest`); email-template module with the three §5 templates; integration test against Resend in dev. Depends on B1, A2.
 - [ ] **B7.** reCAPTCHA verifier (POST to Google `siteverify`, score check). Depends on B1, A3.
 - [ ] **B8.** Generic error envelope, `AppError` enum (`thiserror`), validation helper using the `validator` crate. Depends on B1.
-- [ ] **B9.** In-process rate limiter (tower-http or custom Tower middleware) keyed by IP and by user. Depends on B1.
+- [x] **B9.** In-process rate limiter (tower-http or custom Tower middleware) keyed by IP and by user. Depends on B1.
 
 ### Backend endpoints
 - [ ] **C1.** `POST /auth/register` — depends on B3, B4, B6, B7, B8, B9. Integration tests cover happy path, validation, dup email, captcha failure, rate limit.
@@ -396,7 +396,7 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - [ ] **D11.** Settings — Security section (change password, sign out, sign out everywhere). Depends on D3, C6, C7.
 - [ ] **D12.** Email-change pending banner in the layout shell. Depends on D4, D8.
 - [ ] **D13.** Placeholder dashboard at `/`. Single short copy line — "more app coming in milestone 2." Depends on D4.
-- [ ] **D14.** Placeholder static pages: `/about`, `/terms`, `/privacy`. Real content per `TODO.md`. Depends on D4.
+- [x] **D14.** Placeholder static pages: `/about`, `/terms`, `/privacy`, `/acknowledgements`. Real content per `TODO.md`. Depends on D4.
 
 ### Verification
 - [ ] **E1.** Walk the §10 checklist on the deployed instance. Update `outstanding_decisions_auth.md` and `TODO.md` with anything that surfaces.
