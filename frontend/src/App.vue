@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 
-import PendingEmailBanner from '@/components/PendingEmailBanner.vue'
 import SplashView from '@/components/SplashView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -22,8 +21,5 @@ const splashPinned = computed(() => {
 
 <template>
   <SplashView v-if="splashPinned || auth.status === 'loading'" />
-  <template v-else>
-    <PendingEmailBanner />
-    <RouterView />
-  </template>
+  <RouterView v-else />
 </template>
