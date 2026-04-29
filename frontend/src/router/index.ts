@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import AboutView from '../views/AboutView.vue'
 import AcknowledgementsView from '../views/AcknowledgementsView.vue'
+import CaseDetailView from '../views/CaseDetailView.vue'
 import CasesView from '../views/CasesView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -45,6 +46,16 @@ const router = createRouter({
     },
     // Settings is full-bleed — no tab bar, has its own back button.
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
+
+    // Case detail is also full-bleed (per outstanding_decision.md §1.5) so
+    // the user can focus on the algorithm + result preview without the tab
+    // bar in the way.
+    {
+      path: '/cases/:id',
+      name: 'case-detail',
+      component: CaseDetailView,
+      meta: { requiresAuth: true },
+    },
 
     // Auth views.
     { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },

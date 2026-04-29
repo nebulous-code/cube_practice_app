@@ -28,6 +28,14 @@ export interface Case {
 
 export type CasesStatus = 'idle' | 'loading' | 'ready' | 'error'
 
+export interface SettingsPatch {
+  nickname?: string | null
+  algorithm?: string | null
+  result_case_id?: string | null
+  result_rotation?: number | null
+  tier2_tag?: string | null
+}
+
 interface ListResponse {
   cases: Case[]
 }
@@ -90,6 +98,18 @@ export const useCasesStore = defineStore('cases', () => {
     return ensureLoaded()
   }
 
+  /// PATCH `/cases/:id/settings`. Each patch field uses the same
+  /// `undefined | null | value` semantics as the backend: `undefined`
+  /// (omit from payload) leaves the override alone; `null` clears it;
+  /// a value sets it. The merged response replaces the cached row.
+  async function updateSettings(id: string, patch: SettingsPatch): Promise<Case> {
+    const response = await api.patch<Case>(`/cases/${id}/settings`, patch)
+    const merged = response.data
+    const idx = list.value.findIndex((c) => c.id === id)
+    if (idx >= 0) list.value[idx] = merged
+    return merged
+  }
+
   function $reset() {
     list.value = []
     status.value = 'idle'
@@ -105,6 +125,7 @@ export const useCasesStore = defineStore('cases', () => {
     groupedByTier2,
     ensureLoaded,
     refresh,
+    updateSettings,
     $reset,
   }
 })

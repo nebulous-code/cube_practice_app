@@ -138,3 +138,153 @@ pub async fn get_for_user(
         .await?;
     row.map(MergedRow::into_api).ok_or(AppError::NotFound)
 }
+
+/// Per-field patch. `None` = "leave whatever was there alone";
+/// `Some(None)` = "clear the override"; `Some(Some(v))` = "set override".
+/// Mirrors the `Option<Option<T>>` shape used by the PATCH route.
+#[derive(Debug, Default, Clone)]
+pub struct SettingsPatch {
+    pub nickname: Option<Option<String>>,
+    pub algorithm: Option<Option<String>>,
+    pub result_case_id: Option<Option<Uuid>>,
+    pub result_rotation: Option<Option<i32>>,
+    pub tier2_tag: Option<Option<String>>,
+}
+
+/// Resolved override row — every field carries its post-merge value.
+#[derive(Debug, Default)]
+struct ResolvedSettings {
+    nickname: Option<String>,
+    algorithm: Option<String>,
+    result_case_id: Option<Uuid>,
+    result_rotation: Option<i32>,
+    tier2_tag: Option<String>,
+}
+
+impl ResolvedSettings {
+    fn is_all_null(&self) -> bool {
+        self.nickname.is_none()
+            && self.algorithm.is_none()
+            && self.result_case_id.is_none()
+            && self.result_rotation.is_none()
+            && self.tier2_tag.is_none()
+    }
+}
+
+/// Apply a `SettingsPatch` for the (user, case) pair. Reads the existing
+/// override row (if any), merges the patch with the documented `Option<Option>`
+/// semantics, then either deletes the row (all fields null) or upserts it.
+/// Returns the freshly-merged `Case`.
+///
+/// Validates that:
+///   - The case exists.
+///   - `result_case_id` (if set) refers to a case in the same `solve_stage`.
+pub async fn update_settings(
+    pool: &PgPool,
+    user_id: Uuid,
+    case_id: Uuid,
+    patch: SettingsPatch,
+) -> AppResult<Case> {
+    let stage_id: Option<(Uuid,)> =
+        sqlx::query_as("SELECT solve_stage_id FROM cases WHERE id = $1")
+            .bind(case_id)
+            .fetch_optional(pool)
+            .await?;
+    let (stage_id,) = stage_id.ok_or(AppError::NotFound)?;
+
+    if let Some(Some(rcid)) = patch.result_case_id {
+        let target: Option<(Uuid,)> =
+            sqlx::query_as("SELECT solve_stage_id FROM cases WHERE id = $1")
+                .bind(rcid)
+                .fetch_optional(pool)
+                .await?;
+        let invalid = match target {
+            None => true,
+            Some((target_stage,)) => target_stage != stage_id,
+        };
+        if invalid {
+            let mut fields = std::collections::HashMap::new();
+            fields.insert(
+                "result_case_id".into(),
+                "Must reference a case in the same solve stage.".into(),
+            );
+            return Err(AppError::Validation(fields));
+        }
+    }
+
+    // Read current override row (may not exist).
+    let existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<String>)> =
+        sqlx::query_as(
+            "SELECT nickname, algorithm, result_case_id, result_rotation, tier2_tag \
+             FROM user_case_settings WHERE user_id = $1 AND case_id = $2",
+        )
+        .bind(user_id)
+        .bind(case_id)
+        .fetch_optional(pool)
+        .await?;
+
+    let resolved = resolve(&patch, existing);
+
+    if resolved.is_all_null() {
+        sqlx::query("DELETE FROM user_case_settings WHERE user_id = $1 AND case_id = $2")
+            .bind(user_id)
+            .bind(case_id)
+            .execute(pool)
+            .await?;
+    } else {
+        sqlx::query(
+            r#"
+            INSERT INTO user_case_settings
+                (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tier2_tag)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (user_id, case_id) DO UPDATE SET
+                nickname        = EXCLUDED.nickname,
+                algorithm       = EXCLUDED.algorithm,
+                result_case_id  = EXCLUDED.result_case_id,
+                result_rotation = EXCLUDED.result_rotation,
+                tier2_tag       = EXCLUDED.tier2_tag
+            "#,
+        )
+        .bind(user_id)
+        .bind(case_id)
+        .bind(&resolved.nickname)
+        .bind(&resolved.algorithm)
+        .bind(resolved.result_case_id)
+        .bind(resolved.result_rotation)
+        .bind(&resolved.tier2_tag)
+        .execute(pool)
+        .await?;
+    }
+
+    get_for_user(pool, user_id, case_id).await
+}
+
+fn resolve(
+    patch: &SettingsPatch,
+    existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<String>)>,
+) -> ResolvedSettings {
+    let (e_nick, e_alg, e_rcid, e_rot, e_t2) = existing.unwrap_or_default();
+    ResolvedSettings {
+        nickname: apply_string(&patch.nickname, e_nick),
+        algorithm: apply_string(&patch.algorithm, e_alg),
+        result_case_id: apply_copy(patch.result_case_id, e_rcid),
+        result_rotation: apply_copy(patch.result_rotation, e_rot),
+        tier2_tag: apply_string(&patch.tier2_tag, e_t2),
+    }
+}
+
+fn apply_string(patch: &Option<Option<String>>, existing: Option<String>) -> Option<String> {
+    match patch {
+        None => existing,
+        Some(None) => None,
+        Some(Some(v)) => Some(v.clone()),
+    }
+}
+
+fn apply_copy<T: Copy>(patch: Option<Option<T>>, existing: Option<T>) -> Option<T> {
+    match patch {
+        None => existing,
+        Some(None) => None,
+        Some(Some(v)) => Some(v),
+    }
+}
