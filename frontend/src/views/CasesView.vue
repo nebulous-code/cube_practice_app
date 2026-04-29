@@ -148,7 +148,7 @@ function pad2(n: number): string {
           @click="goCase(c.id)"
         >
           <PatternDiagram :pattern="c.pattern" :size="90" />
-          <p class="tile-num">{{ pad2(c.case_number) }}</p>
+          <p class="tile-num">Case {{ pad2(c.case_number) }}</p>
           <p v-if="c.nickname" class="tile-name">{{ c.nickname }}</p>
         </button>
       </div>
@@ -307,9 +307,10 @@ function pad2(n: number): string {
   padding: 8px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
   font-family: var(--font-sans);
-  text-align: left;
+  text-align: center;
   color: var(--paper-ink);
   cursor: pointer;
 }
@@ -333,6 +334,7 @@ function pad2(n: number): string {
   line-height: 1.1;
   color: var(--paper-ink-muted);
   margin: 0;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
