@@ -261,3 +261,4 @@ All resolved. Values landed in `Cube_Practice_Design_Doc.md` §4 (algorithm cons
 - **§2.1 Auth-view designs** — pending mockups; will review for new conflicts/issues once they land in the repo.
 
 Everything else is resolved. Schema and algorithm are stable; migrations can start whenever.
+
