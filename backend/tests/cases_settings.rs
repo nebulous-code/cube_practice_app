@@ -260,6 +260,66 @@ async fn updates_dont_leak_across_users() {
     assert!(!bobs.has_overrides);
 }
 
+#[tokio::test]
+async fn tags_override_replaces_global() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            tags: Some(Some(vec!["fish".into(), "needs work".into()])),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(merged.tags, vec!["fish", "needs work"]);
+    assert!(merged.has_overrides);
+}
+
+#[tokio::test]
+async fn tags_some_none_clears_to_global() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    // First set an override.
+    cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            tags: Some(Some(vec!["fish".into()])),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // Now clear it.
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            tags: Some(None),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // Falls back to the seeded global tag for case 01 ("dot").
+    assert_eq!(merged.tags, vec!["dot"]);
+    // No other override fields, so the row should be deleted.
+    assert!(!merged.has_overrides);
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async fn seed_user(pool: &sqlx::PgPool, email: &str) -> Uuid {

@@ -24,7 +24,7 @@ export interface Case {
   result_rotation: number
   pattern: string
   tier1_tag: '+' | '-' | 'L' | '*'
-  tier2_tag: string | null
+  tags: string[]
   has_overrides: boolean
   state: CaseState
 }
@@ -36,7 +36,7 @@ export interface SettingsPatch {
   algorithm?: string | null
   result_case_id?: string | null
   result_rotation?: number | null
-  tier2_tag?: string | null
+  tags?: string[] | null
 }
 
 interface ListResponse {
@@ -56,23 +56,16 @@ export const useCasesStore = defineStore('cases', () => {
     return list.value.find((c) => c.id === id)
   }
 
-  /// Cases grouped by Tier 2 tag, with group keys sorted alphabetically and
-  /// cases within each group sorted by case_number ASC. Cases with no Tier 2
-  /// tag fall under a special `(untagged)` bucket sorted last.
-  const groupedByTier2 = computed<Array<[string, Case[]]>>(() => {
-    const groups: Record<string, Case[]> = {}
+  /// Sorted unique union of every tag currently present on any merged case.
+  /// Used by the cases browser tag chip filter and the free-study setup view.
+  const allTags = computed<string[]>(() => {
+    const set = new Set<string>()
     for (const c of list.value) {
-      const key = c.tier2_tag ?? '(untagged)'
-      ;(groups[key] ??= []).push(c)
+      for (const t of c.tags) set.add(t)
     }
-    for (const cases of Object.values(groups)) {
-      cases.sort((a, b) => a.case_number - b.case_number)
-    }
-    return Object.entries(groups).sort(([a], [b]) => {
-      if (a === '(untagged)') return 1
-      if (b === '(untagged)') return -1
-      return a.localeCompare(b, undefined, { sensitivity: 'base' })
-    })
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' }),
+    )
   })
 
   async function ensureLoaded(): Promise<void> {
@@ -125,7 +118,7 @@ export const useCasesStore = defineStore('cases', () => {
     status,
     error,
     byId,
-    groupedByTier2,
+    allTags,
     ensureLoaded,
     refresh,
     updateSettings,

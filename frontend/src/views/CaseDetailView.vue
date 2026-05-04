@@ -48,28 +48,6 @@ async function loadCase() {
 onMounted(loadCase)
 watch(ROUTE_ID, loadCase)
 
-// ─── Tier 2 display labels (mirrors CasesView.vue) ──────────────────────────
-const TIER2_LABELS: Record<string, string> = {
-  dot: 'Dot',
-  T_shapes: 'T-Shapes',
-  C_shapes: 'C-Shapes',
-  squares: 'Squares',
-  lightning_bolts: 'Lightning Bolts',
-  I_shapes: 'I-Shapes',
-  P_shapes: 'P-Shapes',
-  small_L: 'Small L',
-  W_shapes: 'W-Shapes',
-  fish: 'Fish',
-  knight_move: 'Knight Moves',
-  awkward_shape: 'Awkward',
-  corners_correct: 'Corners Correct',
-  solves: 'OCLL / Solves',
-}
-function tier2Label(raw: string | null | undefined): string {
-  if (!raw) return '—'
-  return TIER2_LABELS[raw] ?? raw
-}
-
 const TIER1_LABELS: Record<string, string> = {
   '*': 'Dot',
   L: 'L',
@@ -81,7 +59,7 @@ const TIER1_LABELS: Record<string, string> = {
 const editing = ref(false)
 const draftNickname = ref('')
 const draftAlgorithm = ref('')
-const draftTier2 = ref('')
+const draftTags = ref('')
 const draftResultCaseNumber = ref<number>(0)
 const draftRotation = ref(0)
 
@@ -93,12 +71,31 @@ function startEdit() {
   if (!current.value) return
   draftNickname.value = current.value.nickname ?? ''
   draftAlgorithm.value = current.value.algorithm
-  draftTier2.value = current.value.tier2_tag ?? ''
+  draftTags.value = current.value.tags.join(', ')
   draftResultCaseNumber.value = current.value.result_case_number ?? current.value.case_number
   draftRotation.value = current.value.result_rotation
   formError.value = null
   fieldErrors.value = {}
   editing.value = true
+}
+
+/// Parse a comma-separated tag input. Strips whitespace; leaves the rest
+/// of the normalization (lowercase, dedupe, length cap) to the backend.
+function parseTagInput(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
+
+/// Compare two tag arrays. Order matters since the merge stores the user's
+/// input order verbatim — but post-normalization the server may reorder.
+/// For dirty-checking we compare the post-trim user input to the cached
+/// list as displayed.
+function tagsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
 }
 
 function cancelEdit() {
@@ -157,9 +154,10 @@ function buildPatch(): SettingsPatch | null {
     touched = true
   }
 
-  const t2Trim = draftTier2.value.trim()
-  if (t2Trim !== (c.tier2_tag ?? '')) {
-    patch.tier2_tag = t2Trim.length === 0 ? null : t2Trim
+  const tagsParsed = parseTagInput(draftTags.value)
+  if (!tagsEqual(tagsParsed, c.tags)) {
+    // Empty input clears the override (server returns to global default).
+    patch.tags = tagsParsed.length === 0 ? null : tagsParsed
     touched = true
   }
 
@@ -267,7 +265,8 @@ async function onStartStudying() {
     <template v-else-if="current">
       <section class="title-row">
         <p class="eyebrow">
-          Case {{ pad2(current.case_number) }} · {{ tier2Label(current.tier2_tag) }}
+          Case {{ pad2(current.case_number) }}
+          <template v-if="current.tags.length > 0"> · {{ current.tags[0] }}</template>
         </p>
         <h1 v-if="!editing" class="title">
           <template v-if="current.nickname">{{ current.nickname }}</template>
@@ -303,15 +302,18 @@ async function onStartStudying() {
           <p class="meta-value">{{ TIER1_LABELS[current.tier1_tag] ?? current.tier1_tag }}</p>
 
           <p class="section-eyebrow">Tags</p>
-          <p v-if="!editing" class="meta-value">{{ tier2Label(current.tier2_tag) }}</p>
+          <div v-if="!editing" class="tag-row">
+            <span v-if="current.tags.length === 0" class="tag-empty">—</span>
+            <span v-for="t in current.tags" :key="t" class="tag-chip-display">{{ t }}</span>
+          </div>
           <input
             v-else
-            v-model="draftTier2"
+            v-model="draftTags"
             type="text"
             class="inline-input"
-            placeholder="e.g. dot, T_shapes"
-            maxlength="80"
+            placeholder="e.g. fish, needs work"
           />
+          <p v-if="editing && fieldErrors.tags" class="error">{{ fieldErrors.tags }}</p>
         </div>
       </section>
 
@@ -571,6 +573,30 @@ async function onStartStudying() {
   margin: 0 0 14px;
   outline: none;
   box-sizing: border-box;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.tag-chip-display {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  background: var(--paper-bg);
+  border: 1px solid var(--paper-rule-faint);
+  color: var(--paper-ink);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.tag-empty {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--paper-ink-faint);
 }
 
 .algorithm {

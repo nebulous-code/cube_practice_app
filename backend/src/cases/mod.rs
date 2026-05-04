@@ -28,11 +28,19 @@ pub struct Case {
     pub result_rotation: i32,
     pub pattern: String,
     pub tier1_tag: String,
-    pub tier2_tag: Option<String>,
+    /// Multi-valued tags, normalized (lowercase + trim + dedupe).
+    /// Per-user override fully replaces the global set; an empty user
+    /// override is coerced to NULL by the resolver (no "explicit empty
+    /// override" state). See milestone 04 §3.
+    pub tags: Vec<String>,
     pub has_overrides: bool,
     /// Per-user SM-2 state — see docs/milestones/03_core_study_loop.md §3.
     pub state: CaseState,
 }
+
+/// Maximum length of a single tag, in characters. Enforced by
+/// `normalize_tags` — over-cap inputs return Err.
+pub const TAG_MAX_LEN: usize = 60;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -70,7 +78,7 @@ struct MergedRow {
     result_rotation: i32,
     diagram_data: JsonValue,
     tier1_tag: String,
-    tier2_tag: Option<String>,
+    tags: Vec<String>,
     has_overrides: bool,
     state: String,
     #[allow(dead_code)]
@@ -100,7 +108,7 @@ impl MergedRow {
             result_rotation: self.result_rotation,
             pattern,
             tier1_tag: self.tier1_tag,
-            tier2_tag: self.tier2_tag,
+            tags: self.tags,
             has_overrides: self.has_overrides,
             state: CaseState::from_sql(&self.state),
         }
@@ -127,7 +135,7 @@ SELECT
     COALESCE(ucs.result_rotation, c.result_rotation)      AS result_rotation,
     c.diagram_data                                        AS diagram_data,
     c.tier1_tag                                           AS tier1_tag,
-    COALESCE(ucs.tier2_tag,       c.tier2_tag)            AS tier2_tag,
+    COALESCE(ucs.tags,            c.tags)                 AS tags,
     (ucs.id IS NOT NULL)                                  AS has_overrides,
     CASE
         WHEN ucp.id IS NULL                  THEN 'not_started'
@@ -191,13 +199,17 @@ pub async fn get_for_user(
 /// Per-field patch. `None` = "leave whatever was there alone";
 /// `Some(None)` = "clear the override"; `Some(Some(v))` = "set override".
 /// Mirrors the `Option<Option<T>>` shape used by the PATCH route.
+///
+/// `tags`: callers should pass already-normalized vectors. The route
+/// layer is responsible for running `normalize_tags` and coercing an
+/// empty result to `Some(None)` (= clear the override).
 #[derive(Debug, Default, Clone)]
 pub struct SettingsPatch {
     pub nickname: Option<Option<String>>,
     pub algorithm: Option<Option<String>>,
     pub result_case_id: Option<Option<Uuid>>,
     pub result_rotation: Option<Option<i32>>,
-    pub tier2_tag: Option<Option<String>>,
+    pub tags: Option<Option<Vec<String>>>,
 }
 
 /// Resolved override row — every field carries its post-merge value.
@@ -207,7 +219,7 @@ struct ResolvedSettings {
     algorithm: Option<String>,
     result_case_id: Option<Uuid>,
     result_rotation: Option<i32>,
-    tier2_tag: Option<String>,
+    tags: Option<Vec<String>>,
 }
 
 impl ResolvedSettings {
@@ -216,8 +228,30 @@ impl ResolvedSettings {
             && self.algorithm.is_none()
             && self.result_case_id.is_none()
             && self.result_rotation.is_none()
-            && self.tier2_tag.is_none()
+            && self.tags.is_none()
     }
+}
+
+/// Normalize a tag input vector: trim each entry, lowercase ASCII
+/// letters (Unicode passes through), drop empty entries, dedupe
+/// preserving first-seen order. Returns `Err` with a user-facing message
+/// when any tag exceeds `TAG_MAX_LEN` characters.
+pub fn normalize_tags(input: Vec<String>) -> Result<Vec<String>, String> {
+    let mut out: Vec<String> = Vec::with_capacity(input.len());
+    for raw in input {
+        let mut trimmed = raw.trim().to_string();
+        trimmed.make_ascii_lowercase();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.chars().count() > TAG_MAX_LEN {
+            return Err(format!("Each tag must be {TAG_MAX_LEN} characters or fewer."));
+        }
+        if !out.contains(&trimmed) {
+            out.push(trimmed);
+        }
+    }
+    Ok(out)
 }
 
 /// Apply a `SettingsPatch` for the (user, case) pair. Reads the existing
@@ -262,9 +296,9 @@ pub async fn update_settings(
     }
 
     // Read current override row (may not exist).
-    let existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<String>)> =
+    let existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<Vec<String>>)> =
         sqlx::query_as(
-            "SELECT nickname, algorithm, result_case_id, result_rotation, tier2_tag \
+            "SELECT nickname, algorithm, result_case_id, result_rotation, tags \
              FROM user_case_settings WHERE user_id = $1 AND case_id = $2",
         )
         .bind(user_id)
@@ -284,14 +318,14 @@ pub async fn update_settings(
         sqlx::query(
             r#"
             INSERT INTO user_case_settings
-                (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tier2_tag)
+                (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tags)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (user_id, case_id) DO UPDATE SET
                 nickname        = EXCLUDED.nickname,
                 algorithm       = EXCLUDED.algorithm,
                 result_case_id  = EXCLUDED.result_case_id,
                 result_rotation = EXCLUDED.result_rotation,
-                tier2_tag       = EXCLUDED.tier2_tag
+                tags            = EXCLUDED.tags
             "#,
         )
         .bind(user_id)
@@ -300,7 +334,7 @@ pub async fn update_settings(
         .bind(&resolved.algorithm)
         .bind(resolved.result_case_id)
         .bind(resolved.result_rotation)
-        .bind(&resolved.tier2_tag)
+        .bind(resolved.tags.as_deref())
         .execute(pool)
         .await?;
     }
@@ -310,15 +344,23 @@ pub async fn update_settings(
 
 fn resolve(
     patch: &SettingsPatch,
-    existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<String>)>,
+    existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<Vec<String>>)>,
 ) -> ResolvedSettings {
-    let (e_nick, e_alg, e_rcid, e_rot, e_t2) = existing.unwrap_or_default();
+    let (e_nick, e_alg, e_rcid, e_rot, e_tags) = existing.unwrap_or_default();
     ResolvedSettings {
         nickname: apply_string(&patch.nickname, e_nick),
         algorithm: apply_string(&patch.algorithm, e_alg),
         result_case_id: apply_copy(patch.result_case_id, e_rcid),
         result_rotation: apply_copy(patch.result_rotation, e_rot),
-        tier2_tag: apply_string(&patch.tier2_tag, e_t2),
+        tags: apply_clone(patch.tags.as_ref(), e_tags),
+    }
+}
+
+fn apply_clone<T: Clone>(patch: Option<&Option<T>>, existing: Option<T>) -> Option<T> {
+    match patch {
+        None => existing,
+        Some(None) => None,
+        Some(Some(v)) => Some(v.clone()),
     }
 }
 
@@ -335,5 +377,75 @@ fn apply_copy<T: Copy>(patch: Option<Option<T>>, existing: Option<T>) -> Option<
         None => existing,
         Some(None) => None,
         Some(Some(v)) => Some(v),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_tags_empty_input() {
+        assert_eq!(normalize_tags(vec![]).unwrap(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn normalize_tags_lowercases_ascii() {
+        assert_eq!(
+            normalize_tags(vec!["Fish".into(), "FISH".into()]).unwrap(),
+            vec!["fish"],
+        );
+    }
+
+    #[test]
+    fn normalize_tags_trims_whitespace() {
+        assert_eq!(
+            normalize_tags(vec!["  fish  ".into(), "\tneeds work\n".into()]).unwrap(),
+            vec!["fish", "needs work"],
+        );
+    }
+
+    #[test]
+    fn normalize_tags_drops_empty_after_trim() {
+        assert_eq!(
+            normalize_tags(vec!["".into(), "   ".into(), "fish".into()]).unwrap(),
+            vec!["fish"],
+        );
+    }
+
+    #[test]
+    fn normalize_tags_dedupes_preserving_first_seen_order() {
+        assert_eq!(
+            normalize_tags(vec![
+                "fish".into(),
+                "needs work".into(),
+                "fish".into(),
+                "Fish".into(), // also a duplicate after lowercase
+            ])
+            .unwrap(),
+            vec!["fish", "needs work"],
+        );
+    }
+
+    #[test]
+    fn normalize_tags_passes_unicode_through() {
+        // Non-ASCII letters aren't lowercased — "Δ" stays "Δ".
+        assert_eq!(
+            normalize_tags(vec!["Δ".into(), "café".into()]).unwrap(),
+            vec!["Δ", "café"],
+        );
+    }
+
+    #[test]
+    fn normalize_tags_rejects_over_cap() {
+        let too_long: String = "a".repeat(TAG_MAX_LEN + 1);
+        let err = normalize_tags(vec![too_long]).expect_err("should reject");
+        assert!(err.contains(&TAG_MAX_LEN.to_string()), "got: {err}");
+    }
+
+    #[test]
+    fn normalize_tags_accepts_at_cap() {
+        let at_cap: String = "a".repeat(TAG_MAX_LEN);
+        assert_eq!(normalize_tags(vec![at_cap.clone()]).unwrap(), vec![at_cap]);
     }
 }

@@ -27,26 +27,14 @@ const TIER1_CHIPS: ReadonlyArray<{ key: Tier1Filter; label: string }> = [
   { key: '+', label: 'Cross' },
 ]
 
-// Display label for raw Tier 2 tags (mirrors initial_design/src/data.jsx GROUP_LABELS).
-const TIER2_LABELS: Record<string, string> = {
-  dot: 'Dot',
-  T_shapes: 'T-Shapes',
-  C_shapes: 'C-Shapes',
-  squares: 'Squares',
-  lightning_bolts: 'Lightning Bolts',
-  I_shapes: 'I-Shapes',
-  P_shapes: 'P-Shapes',
-  small_L: 'Small L',
-  W_shapes: 'W-Shapes',
-  fish: 'Fish',
-  knight_move: 'Knight Moves',
-  awkward_shape: 'Awkward',
-  corners_correct: 'Corners Correct',
-  solves: 'OCLL / Solves',
-}
+// Multi-select tag filter — any-of semantics.
+const tagFilter = ref<Set<string>>(new Set())
 
-function tier2Label(raw: string): string {
-  return TIER2_LABELS[raw] ?? raw
+function toggleTag(tag: string) {
+  const next = new Set(tagFilter.value)
+  if (next.has(tag)) next.delete(tag)
+  else next.add(tag)
+  tagFilter.value = next
 }
 
 function matchesSearch(c: Case, q: string): boolean {
@@ -56,8 +44,7 @@ function matchesSearch(c: Case, q: string): boolean {
   if (String(c.case_number).includes(needle)) return true
   if (c.nickname && c.nickname.toLowerCase().includes(needle)) return true
   if (c.algorithm.toLowerCase().includes(needle)) return true
-  if (c.tier2_tag && c.tier2_tag.toLowerCase().includes(needle)) return true
-  if (tier2Label(c.tier2_tag ?? '').toLowerCase().includes(needle)) return true
+  if (c.tags.some((t) => t.toLowerCase().includes(needle))) return true
   return false
 }
 
@@ -66,19 +53,20 @@ function matchesTier1(c: Case): boolean {
   return c.tier1_tag === tier1Filter.value
 }
 
-const filteredGroups = computed(() => {
-  return cases.groupedByTier2
-    .map(([key, list]) => {
-      const filtered = list.filter((c) => matchesTier1(c) && matchesSearch(c, search.value))
-      return [key, filtered] as const
-    })
-    .filter(([, list]) => list.length > 0)
-})
+function matchesTags(c: Case): boolean {
+  if (tagFilter.value.size === 0) return true
+  return c.tags.some((t) => tagFilter.value.has(t))
+}
+
+const filteredCases = computed(() =>
+  cases.list
+    .filter((c) => matchesTier1(c) && matchesTags(c) && matchesSearch(c, search.value))
+    .slice()
+    .sort((a, b) => a.case_number - b.case_number),
+)
 
 const totalCount = computed(() => cases.list.length)
-const filteredCount = computed(() =>
-  filteredGroups.value.reduce((sum, [, list]) => sum + list.length, 0),
-)
+const filteredCount = computed(() => filteredCases.value.length)
 
 function goCase(id: string) {
   router.push(`/cases/${id}`)
@@ -122,6 +110,19 @@ function pad2(n: number): string {
       </button>
     </div>
 
+    <div v-if="cases.allTags.length > 0" class="chips tag-chips">
+      <button
+        v-for="tag in cases.allTags"
+        :key="tag"
+        type="button"
+        class="chip tag-chip"
+        :class="{ active: tagFilter.has(tag) }"
+        @click="toggleTag(tag)"
+      >
+        {{ tag }}
+      </button>
+    </div>
+
     <div v-if="cases.status === 'loading'" class="state">Loading cases…</div>
     <div v-else-if="cases.status === 'error'" class="state error">
       Couldn't load cases. {{ cases.error }}
@@ -131,32 +132,22 @@ function pad2(n: number): string {
       No cases match the current filter.
     </div>
 
-    <section
-      v-for="[group, list] in filteredGroups"
-      :key="group"
-      class="group"
-    >
-      <header class="group-head">
-        <h2 class="group-title">{{ tier2Label(group) }}</h2>
-        <p class="group-count">{{ list.length }}</p>
-      </header>
-      <div class="grid">
-        <button
-          v-for="c in list"
-          :key="c.id"
-          type="button"
-          class="tile"
-          @click="goCase(c.id)"
-        >
-          <div class="tile-pattern">
-            <PatternDiagram :pattern="c.pattern" :size="90" />
-            <CaseStatePip :state="c.state" class="tile-pip" />
-          </div>
-          <p class="tile-num">Case {{ pad2(c.case_number) }}</p>
-          <p v-if="c.nickname" class="tile-name">{{ c.nickname }}</p>
-        </button>
-      </div>
-    </section>
+    <div v-else class="grid">
+      <button
+        v-for="c in filteredCases"
+        :key="c.id"
+        type="button"
+        class="tile"
+        @click="goCase(c.id)"
+      >
+        <div class="tile-pattern">
+          <PatternDiagram :pattern="c.pattern" :size="90" />
+          <CaseStatePip :state="c.state" class="tile-pip" />
+        </div>
+        <p class="tile-num">Case {{ pad2(c.case_number) }}</p>
+        <p v-if="c.nickname" class="tile-name">{{ c.nickname }}</p>
+      </button>
+    </div>
   </main>
 </template>
 
@@ -268,37 +259,17 @@ function pad2(n: number): string {
   cursor: pointer;
 }
 
-.group {
-  margin-top: 24px;
+.tag-chips {
+  padding-top: 8px;
 }
 
-.group-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 10px;
-}
-
-.group-title {
-  font-family: var(--font-serif);
-  font-size: 18px;
-  font-style: italic;
-  letter-spacing: -0.2px;
-  color: var(--paper-ink);
-  margin: 0;
-}
-
-.group-count {
-  font-family: var(--font-sans);
+.tag-chip {
   font-size: 11px;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--paper-ink-faint);
-  font-weight: 500;
-  margin: 0;
+  padding: 5px 11px;
 }
 
 .grid {
+  margin-top: 18px;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;

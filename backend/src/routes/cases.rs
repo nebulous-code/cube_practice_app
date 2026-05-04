@@ -11,12 +11,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::auth::extractor::AuthUser;
-use crate::cases::{self, Case, SettingsPatch};
+use crate::cases::{self, normalize_tags, Case, SettingsPatch};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
 const NICKNAME_MAX: usize = 80;
-const TIER2_MAX: usize = 80;
 const ALGORITHM_MAX: usize = 1000;
 
 pub fn router() -> Router<AppState> {
@@ -64,7 +63,7 @@ pub struct UpdateSettingsRequest {
     #[serde(default, deserialize_with = "deserialize_optional_field")]
     result_rotation: Option<Option<i32>>,
     #[serde(default, deserialize_with = "deserialize_optional_field")]
-    tier2_tag: Option<Option<String>>,
+    tags: Option<Option<Vec<String>>>,
 }
 
 fn deserialize_optional_field<'de, T, D>(
@@ -87,8 +86,22 @@ async fn update_settings(
 
     // Trim/validate strings up front. Trimmed-empty becomes None (clears).
     let nickname = trim_optional(&req.nickname, "nickname", NICKNAME_MAX, &mut fields);
-    let tier2_tag = trim_optional(&req.tier2_tag, "tier2_tag", TIER2_MAX, &mut fields);
     let algorithm = trim_optional(&req.algorithm, "algorithm", ALGORITHM_MAX, &mut fields);
+
+    // Normalize tags. An empty post-normalization vector is coerced to
+    // Some(None) (clears the override) — see milestone 04 §3.
+    let tags = match req.tags {
+        None => None,
+        Some(None) => Some(None),
+        Some(Some(raw)) => match normalize_tags(raw) {
+            Ok(v) if v.is_empty() => Some(None),
+            Ok(v) => Some(Some(v)),
+            Err(msg) => {
+                fields.insert("tags".into(), msg);
+                None
+            }
+        },
+    };
 
     if let Some(Some(rot)) = req.result_rotation {
         if !(0..=3).contains(&rot) {
@@ -108,7 +121,7 @@ async fn update_settings(
         algorithm,
         result_case_id: req.result_case_id,
         result_rotation: req.result_rotation,
-        tier2_tag,
+        tags,
     };
 
     let case = cases::update_settings(&state.pool, user.user_id, case_id, patch).await?;

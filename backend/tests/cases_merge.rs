@@ -57,7 +57,7 @@ async fn applies_nickname_override() {
     // Other fields fall through to defaults.
     assert_eq!(case.case_number, 1);
     assert_eq!(case.tier1_tag, "*");
-    assert_eq!(case.tier2_tag.as_deref(), Some("dot"));
+    assert_eq!(case.tags, vec!["dot".to_string()]);
 }
 
 #[tokio::test]

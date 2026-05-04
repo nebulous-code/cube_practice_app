@@ -112,8 +112,8 @@ async fn seed_is_idempotent() {
         r#"
         INSERT INTO cases
             (solve_stage_id, case_number, nickname, algorithm, diagram_data,
-             tier1_tag, tier2_tag, result_rotation)
-        SELECT s.id, 1, 'Tie Fighter (re-run)', 'changed', '{"pattern":"X"}'::jsonb, '*', 'dot', 2
+             tier1_tag, tags, result_rotation)
+        SELECT s.id, 1, 'Tie Fighter (re-run)', 'changed', '{"pattern":"X"}'::jsonb, '*', ARRAY['dot'], 2
         FROM solve_stages s
         JOIN puzzle_types pt ON pt.id = s.puzzle_type_id
         WHERE s.name = 'OLL' AND pt.name = '3x3'
