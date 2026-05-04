@@ -8,6 +8,7 @@ import { ref } from 'vue'
 
 import { ApiError, api } from '@/api/client'
 import { useCasesStore } from '@/stores/cases'
+import { useProgressStore } from '@/stores/progress'
 import { useStudyStore } from '@/stores/study'
 
 /// Wipe every store that caches data scoped to the current user. Called
@@ -16,6 +17,7 @@ import { useStudyStore } from '@/stores/study'
 function resetUserScopedStores() {
   useCasesStore().$reset()
   useStudyStore().$reset()
+  useProgressStore().$reset()
 }
 
 export interface User {

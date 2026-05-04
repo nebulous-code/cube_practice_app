@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 
 import { ApiError, api } from '@/api/client'
 import { type Case, useCasesStore } from '@/stores/cases'
+import { useProgressStore } from '@/stores/progress'
 
 export interface Streak {
   count: number
@@ -75,9 +76,16 @@ export const useStudyStore = defineStore('study', () => {
     return true
   }
 
-  /// Build a multi-card session from the loaded due queue.
-  function startSession(): boolean {
-    if (queue.value.length === 0) return false
+  /// Build a multi-card session. With no argument, uses the loaded due
+  /// queue (set by `loadDue`). With an explicit `customQueue`, uses that
+  /// list verbatim — this is how free-study sessions feed in.
+  function startSession(customQueue?: Case[]): boolean {
+    if (customQueue !== undefined) {
+      if (customQueue.length === 0) return false
+      queue.value = customQueue.slice()
+    } else if (queue.value.length === 0) {
+      return false
+    }
     index.value = 0
     results.value = []
     status.value = 'in_session'
@@ -100,6 +108,10 @@ export const useStudyStore = defineStore('study', () => {
       const cases = useCasesStore()
       const idx = cases.list.findIndex((c) => c.id === response.data.case.id)
       if (idx >= 0) cases.list[idx] = response.data.case
+
+      // Refresh the progress summary so the dashboard / progress views
+      // reflect the new state counts.
+      void useProgressStore().reload()
 
       index.value += 1
       if (index.value >= queue.value.length) {

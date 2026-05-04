@@ -166,6 +166,31 @@ pub async fn list_for_user(pool: &PgPool, user_id: Uuid) -> AppResult<Vec<Case>>
     Ok(rows.into_iter().map(MergedRow::into_api).collect())
 }
 
+/// Fetch every case for the user filtered to a single SM-2 state. Sorted
+/// by case number ascending. Used by `/progress/cases?state=…`.
+pub async fn list_for_user_in_state(
+    pool: &PgPool,
+    user_id: Uuid,
+    state: CaseState,
+) -> AppResult<Vec<Case>> {
+    let where_clause = match state {
+        CaseState::NotStarted => "ucp.id IS NULL",
+        CaseState::Due => "ucp.id IS NOT NULL AND ucp.due_date <= CURRENT_DATE",
+        CaseState::Learning => {
+            "ucp.id IS NOT NULL AND ucp.due_date > CURRENT_DATE AND ucp.interval_days < 21"
+        }
+        CaseState::Mastered => {
+            "ucp.id IS NOT NULL AND ucp.due_date > CURRENT_DATE AND ucp.interval_days >= 21"
+        }
+    };
+    let sql = format!("{MERGE_SELECT} WHERE {where_clause} ORDER BY c.case_number ASC");
+    let rows: Vec<MergedRow> = sqlx::query_as(&sql)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
+    Ok(rows.into_iter().map(MergedRow::into_api).collect())
+}
+
 /// Fetch only cases currently in the `due` state for the user. Sorted by
 /// `due_date` ascending so the oldest-due cards come first in the queue.
 pub async fn list_due_for_user(pool: &PgPool, user_id: Uuid) -> AppResult<Vec<Case>> {

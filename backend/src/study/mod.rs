@@ -177,6 +177,12 @@ async fn update_streak(
     Ok(())
 }
 
+/// Public wrapper over `read_streak` so other modules (e.g. `progress`)
+/// can fetch the streak without duplicating the query.
+pub async fn read_streak_public(pool: &PgPool, user_id: Uuid) -> AppResult<Streak> {
+    read_streak(pool, user_id).await
+}
+
 async fn read_streak(pool: &PgPool, user_id: Uuid) -> AppResult<Streak> {
     let row: Option<(i32, Option<NaiveDate>)> = sqlx::query_as(
         "SELECT streak_count, last_practice_date FROM users WHERE id = $1",

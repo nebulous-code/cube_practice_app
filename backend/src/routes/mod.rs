@@ -1,5 +1,6 @@
 mod auth;
 mod cases;
+mod progress;
 mod study;
 
 use axum::{routing::get, Json, Router};
@@ -12,6 +13,7 @@ pub fn router() -> Router<AppState> {
         .route("/health", get(health))
         .merge(auth::router())
         .merge(cases::router())
+        .merge(progress::router())
         .merge(study::router())
 }
 

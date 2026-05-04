@@ -80,11 +80,22 @@ function pad2(n: number): string {
 <template>
   <main class="page">
     <header class="head">
-      <p class="eyebrow">Reference</p>
-      <h1 class="title">
-        All cases
-        <span class="count">{{ totalCount }}</span>
-      </h1>
+      <div class="head-row">
+        <div>
+          <p class="eyebrow">Reference</p>
+          <h1 class="title">
+            All cases
+            <span class="count">{{ totalCount }}</span>
+          </h1>
+        </div>
+        <button
+          type="button"
+          class="free-study-btn"
+          @click="router.push('/free-study')"
+        >
+          Free study →
+        </button>
+      </div>
     </header>
 
     <div class="search-row">
@@ -161,6 +172,30 @@ function pad2(n: number): string {
 
 .head {
   padding: 32px 0 8px;
+}
+
+.head-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.free-study-btn {
+  background: transparent;
+  border: 1px solid var(--paper-rule);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  color: var(--paper-ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.free-study-btn:hover {
+  border-color: var(--paper-ink);
 }
 
 .eyebrow {

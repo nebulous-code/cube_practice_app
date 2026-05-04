@@ -3,17 +3,41 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { useProgressStore } from '@/stores/progress'
 import { useStudyStore } from '@/stores/study'
 
 const router = useRouter()
 const auth = useAuthStore()
 const study = useStudyStore()
+const progress = useProgressStore()
 
 onMounted(() => {
   void study.loadDue()
+  void progress.ensureLoaded()
 })
 
 const dueCount = computed(() => study.queue.length)
+
+// Standing card data — reads from progressStore.summary. Falls back to
+// zeros when the summary hasn't loaded yet.
+interface Segment {
+  key: 'mastered' | 'learning' | 'due' | 'not_started'
+  label: string
+  count: number
+  className: string
+}
+
+const standingSegments = computed<Segment[]>(() => {
+  const s = progress.summary?.summary
+  return [
+    { key: 'mastered', label: 'Mastered', count: s?.mastered ?? 0, className: 'mastered' },
+    { key: 'learning', label: 'Learning', count: s?.learning ?? 0, className: 'learning' },
+    { key: 'due', label: 'Due', count: s?.due ?? 0, className: 'due' },
+    { key: 'not_started', label: 'New', count: s?.not_started ?? 0, className: 'not-started' },
+  ]
+})
+
+const standingTotal = computed(() => progress.summary?.total ?? 0)
 
 const dateStr = computed(() =>
   new Date().toLocaleDateString('en-US', {
@@ -89,6 +113,39 @@ function startSession() {
     <p v-if="study.status === 'error'" class="error">
       {{ study.error }}
     </p>
+
+    <!-- Standing — SM-2 state distribution + count chips -->
+    <section v-if="standingTotal > 0" class="standing-card">
+      <p class="standing-eyebrow">Standing</p>
+      <div class="standing-bar">
+        <div
+          v-for="seg in standingSegments"
+          :key="seg.key"
+          class="standing-seg"
+          :class="seg.className"
+          :style="{ width: ((seg.count / standingTotal) * 100) + '%' }"
+        />
+      </div>
+      <div class="standing-chips">
+        <div
+          v-for="seg in standingSegments"
+          :key="seg.key"
+          class="standing-chip"
+          :class="seg.className"
+        >
+          <span class="standing-count">{{ seg.count }}</span>
+          <span class="standing-label">{{ seg.label }}</span>
+        </div>
+      </div>
+    </section>
+
+    <button
+      type="button"
+      class="free-study-link"
+      @click="router.push('/free-study')"
+    >
+      Free study →
+    </button>
 
     <p v-if="dueCount === 0" class="empty-hint">
       No cards due. Open a case from the
@@ -266,6 +323,106 @@ function startSession() {
   font-size: 13px;
   color: var(--paper-error);
   margin-top: 16px;
+}
+
+.standing-card {
+  margin-top: 16px;
+  background: var(--paper-card);
+  border: 1px solid var(--paper-rule-faint);
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+}
+
+.standing-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--paper-ink-faint);
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+
+.standing-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--paper-rule-faint);
+  margin-bottom: 12px;
+}
+
+.standing-seg {
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.standing-seg.mastered {
+  background: var(--paper-success, #5a8a5a);
+}
+.standing-seg.learning {
+  background: var(--paper-accent);
+}
+.standing-seg.due {
+  background: var(--paper-warning, #c47a3d);
+}
+.standing-seg.not-started {
+  background: var(--paper-ink-faint);
+  opacity: 0.5;
+}
+
+.standing-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.standing-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: var(--paper-bg);
+}
+
+.standing-count {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  letter-spacing: -0.4px;
+  line-height: 1;
+}
+
+.standing-chip.mastered .standing-count { color: var(--paper-success, #5a8a5a); }
+.standing-chip.learning .standing-count { color: var(--paper-accent); }
+.standing-chip.due .standing-count { color: var(--paper-warning, #c47a3d); }
+.standing-chip.not-started .standing-count { color: var(--paper-ink-faint); }
+
+.standing-label {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  opacity: 0.75;
+}
+
+.free-study-link {
+  margin-top: 14px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--paper-rule);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--paper-ink);
+  cursor: pointer;
+  letter-spacing: 0.2px;
+}
+
+.free-study-link:hover {
+  border-color: var(--paper-ink);
 }
 
 .empty-hint {

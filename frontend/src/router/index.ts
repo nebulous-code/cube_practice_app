@@ -6,10 +6,11 @@ import AcknowledgementsView from '../views/AcknowledgementsView.vue'
 import CaseDetailView from '../views/CaseDetailView.vue'
 import CasesView from '../views/CasesView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import FreeStudyView from '../views/FreeStudyView.vue'
 import LoginView from '../views/LoginView.vue'
 import PracticeView from '../views/PracticeView.vue'
 import PrivacyView from '../views/PrivacyView.vue'
-import ProgressStubView from '../views/ProgressStubView.vue'
+import ProgressView from '../views/ProgressView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import SettingsView from '../views/SettingsView.vue'
@@ -42,7 +43,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'practice', component: PracticeView },
         { path: 'cases', name: 'cases', component: CasesView },
-        { path: 'progress', name: 'progress', component: ProgressStubView },
+        { path: 'progress', name: 'progress', component: ProgressView },
       ],
     },
     // Settings is full-bleed — no tab bar, has its own back button.
@@ -50,6 +51,14 @@ const router = createRouter({
 
     // Study session is full-bleed — full attention on the card.
     { path: '/study', name: 'study', component: StudySessionView, meta: { requiresAuth: true } },
+
+    // Free-study setup — full-bleed filter screen, no tab bar.
+    {
+      path: '/free-study',
+      name: 'free-study',
+      component: FreeStudyView,
+      meta: { requiresAuth: true },
+    },
 
     // Case detail is also full-bleed (per outstanding_decision.md §1.5) so
     // the user can focus on the algorithm + result preview without the tab
