@@ -160,7 +160,7 @@ function goCase(id: string) {
 .page {
   background: var(--paper-bg);
   min-height: calc(100vh - 90px);
-  padding: 32px 22px 40px;
+  padding: 32px 22px 90px;
   color: var(--paper-ink);
 }
 

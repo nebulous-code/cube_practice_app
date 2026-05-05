@@ -159,7 +159,7 @@ function startSession() {
 .page {
   background: var(--paper-bg);
   min-height: calc(100vh - 90px);
-  padding: 36px 22px 40px;
+  padding: 36px 22px 90px;
   color: var(--paper-ink);
 }
 
