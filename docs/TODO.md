@@ -12,7 +12,8 @@ Things that need a human decision, content, design, or external action — items
 
 ## Design
 
-- [ ] **Onboarding flow.** Two-step screen ("Practice OLL with intention" / "Weakest cases come first") shown once after first verification. You said the designer will build this out once we're further along — non-blocker for backend / data work. Update `outstanding_decisions_auth.md` item 9 when designs land so we can review for new conflicts.
+- [ ] **Onboarding flow.** Two-step screen ("Practice OLL with intention" / "Weakest cases come first") shown once after first verification. You said the designer will build this out once we're further along — non-blocker for backend / data work. Update `outstanding_decisions_auth.md` item 9 when designs land so we can review for new conflicts. M5 ships a placeholder-copy stub at `frontend/src/views/OnboardingView.vue`; swap the template strings there when final copy lands.
+- [ ] **Landing page copy.** M5 ships placeholder marketing copy at `frontend/src/views/LandingView.vue` (hero, feature list, how-it-works steps, CTAs). Replace before public launch.
 - [ ] **Splash screen final treatment.** Currently a placeholder; intent is for it to also cover backend cold-start. Confirm whether the placeholder visual is final or whether a polished version is coming.
 
 ## Verification / external research
