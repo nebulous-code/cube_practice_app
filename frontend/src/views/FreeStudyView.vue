@@ -13,10 +13,10 @@ onMounted(() => {
   void cases.ensureLoaded()
 })
 
-type Tier1Filter = 'all' | '*' | 'L' | '-' | '+'
+type Tier1Shape = '*' | 'L' | '-' | '+'
+type SelectMode = 'only' | 'any-of'
 
-const TIER1_CHIPS: ReadonlyArray<{ key: Tier1Filter; label: string }> = [
-  { key: 'all', label: 'All' },
+const TIER1_SHAPES: ReadonlyArray<{ key: Tier1Shape; label: string }> = [
   { key: '*', label: 'Dot' },
   { key: 'L', label: 'L' },
   { key: '-', label: 'Line' },
@@ -30,17 +30,50 @@ const STATE_CHIPS: ReadonlyArray<{ key: CaseState; label: string }> = [
   { key: 'mastered', label: 'Mastered' },
 ]
 
-const tier1 = ref<Tier1Filter>('all')
+const tier1Mode = ref<SelectMode>('only')
+const tier1Filter = ref<Set<Tier1Shape>>(new Set())
+const tagMode = ref<SelectMode>('any-of')
 const tagFilter = ref<Set<string>>(new Set())
 const stateFilter = ref<Set<CaseState>>(
   new Set<CaseState>(['not_started', 'learning', 'due', 'mastered']),
 )
 
+// In "only" mode a click is exclusive (replaces the set); clicking the
+// already-selected chip clears it. In "any-of" mode a click toggles
+// membership. Empty set means "no filter".
+function toggleInSet<T>(set: Set<T>, value: T, mode: SelectMode): Set<T> {
+  const next = new Set(set)
+  if (mode === 'only') {
+    if (next.has(value) && next.size === 1) next.clear()
+    else {
+      next.clear()
+      next.add(value)
+    }
+  } else {
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+  }
+  return next
+}
+
+function toggleTier1(s: Tier1Shape) {
+  tier1Filter.value = toggleInSet(tier1Filter.value, s, tier1Mode.value)
+}
+
+function clearTier1() {
+  tier1Filter.value = new Set()
+}
+
+function toggleTier1Mode() {
+  tier1Mode.value = tier1Mode.value === 'only' ? 'any-of' : 'only'
+}
+
 function toggleTag(tag: string) {
-  const next = new Set(tagFilter.value)
-  if (next.has(tag)) next.delete(tag)
-  else next.add(tag)
-  tagFilter.value = next
+  tagFilter.value = toggleInSet(tagFilter.value, tag, tagMode.value)
+}
+
+function toggleTagMode() {
+  tagMode.value = tagMode.value === 'only' ? 'any-of' : 'only'
 }
 
 function toggleState(s: CaseState) {
@@ -52,7 +85,7 @@ function toggleState(s: CaseState) {
 
 const filtered = computed<Case[]>(() => {
   return cases.list.filter((c) => {
-    if (tier1.value !== 'all' && c.tier1_tag !== tier1.value) return false
+    if (tier1Filter.value.size > 0 && !tier1Filter.value.has(c.tier1_tag)) return false
     if (tagFilter.value.size > 0 && !c.tags.some((t) => tagFilter.value.has(t))) return false
     if (!stateFilter.value.has(c.state)) return false
     return true
@@ -82,15 +115,28 @@ function cancel() {
     </header>
 
     <section class="section">
-      <p class="section-label">Primary shape</p>
+      <p class="section-label">
+        Primary shape
+        <button type="button" class="hint mode-toggle" @click="toggleTier1Mode">
+          {{ tier1Mode === 'only' ? 'only' : 'any of' }}
+        </button>
+      </p>
       <div class="chips">
         <button
-          v-for="chip in TIER1_CHIPS"
+          type="button"
+          class="chip"
+          :class="{ active: tier1Filter.size === 0 }"
+          @click="clearTier1"
+        >
+          All
+        </button>
+        <button
+          v-for="chip in TIER1_SHAPES"
           :key="chip.key"
           type="button"
           class="chip"
-          :class="{ active: tier1 === chip.key }"
-          @click="tier1 = chip.key"
+          :class="{ active: tier1Filter.has(chip.key) }"
+          @click="toggleTier1(chip.key)"
         >
           {{ chip.label }}
         </button>
@@ -98,7 +144,12 @@ function cancel() {
     </section>
 
     <section v-if="cases.allTags.length > 0" class="section">
-      <p class="section-label">Tags <span class="hint">any of</span></p>
+      <p class="section-label">
+        Tags
+        <button type="button" class="hint mode-toggle" @click="toggleTagMode">
+          {{ tagMode === 'only' ? 'only' : 'any of' }}
+        </button>
+      </p>
       <div class="chips wrap">
         <button
           v-for="tag in cases.allTags"
@@ -212,6 +263,21 @@ function cancel() {
   text-transform: none;
   color: var(--paper-ink-faint);
   margin-left: 6px;
+}
+
+.mode-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--paper-rule-faint);
+  text-underline-offset: 3px;
+}
+
+.mode-toggle:hover {
+  color: var(--paper-ink-muted);
+  text-decoration-color: var(--paper-ink-muted);
 }
 
 .chips {
