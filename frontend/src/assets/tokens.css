@@ -64,3 +64,29 @@ body,
 button {
   font-family: inherit;
 }
+
+/*
+ * Focus rings — keyboard-only via `:focus-visible` so mouse clicks on
+ * buttons don't paint a halo. Tuned to the paper palette: a warm-accent
+ * outline with a soft offset so it shows on top of paper-card and
+ * dark-ink surfaces alike.
+ */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--paper-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--paper-accent);
+  outline-offset: 2px;
+}

@@ -30,7 +30,8 @@ async function onSubmit() {
   try {
     await auth.login(email.value.trim().toLowerCase(), password.value)
     const nextRaw = route.query.next
-    const dest = typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/'
+    const dest =
+      typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/practice'
     router.push(dest)
   } catch (err) {
     if (err instanceof ApiError) {

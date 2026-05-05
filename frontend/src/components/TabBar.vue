@@ -20,13 +20,12 @@ const ICON_PROGRESS =
   'M4 20 V14 M10 20 V8 M16 20 V4 M22 20 H2'
 
 const TABS: ReadonlyArray<Tab> = [
-  { to: '/', label: 'Practice', icon: ICON_PRACTICE },
+  { to: '/practice', label: 'Practice', icon: ICON_PRACTICE },
   { to: '/cases', label: 'Cases', icon: ICON_CASES },
   { to: '/progress', label: 'Progress', icon: ICON_PROGRESS },
 ]
 
 function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
   return route.path === to || route.path.startsWith(`${to}/`)
 }
 

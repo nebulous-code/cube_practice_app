@@ -102,7 +102,7 @@ function startSession() {
 
 function cancel() {
   if (window.history.length > 1) router.back()
-  else router.push('/')
+  else router.push('/practice')
 }
 </script>
 
@@ -117,7 +117,12 @@ function cancel() {
     <section class="section">
       <p class="section-label">
         Primary shape
-        <button type="button" class="hint mode-toggle" @click="toggleTier1Mode">
+        <button
+          type="button"
+          class="hint mode-toggle"
+          :aria-label="`Primary shape filter mode: ${tier1Mode === 'only' ? 'only one at a time' : 'any of'} — tap to toggle`"
+          @click="toggleTier1Mode"
+        >
           {{ tier1Mode === 'only' ? 'only' : 'any of' }}
         </button>
       </p>
@@ -146,7 +151,12 @@ function cancel() {
     <section v-if="cases.allTags.length > 0" class="section">
       <p class="section-label">
         Tags
-        <button type="button" class="hint mode-toggle" @click="toggleTagMode">
+        <button
+          type="button"
+          class="hint mode-toggle"
+          :aria-label="`Tag filter mode: ${tagMode === 'only' ? 'only one at a time' : 'any of'} — tap to toggle`"
+          @click="toggleTagMode"
+        >
           {{ tagMode === 'only' ? 'only' : 'any of' }}
         </button>
       </p>
@@ -183,6 +193,9 @@ function cancel() {
     <p class="count">
       <strong>{{ matchCount }}</strong>
       {{ matchCount === 1 ? 'case matches' : 'cases match' }}
+    </p>
+    <p v-if="matchCount === 0" class="empty-note">
+      No cases match — loosen filters.
     </p>
 
     <button
@@ -328,6 +341,13 @@ function cancel() {
   color: var(--paper-ink);
   font-weight: 500;
   margin-right: 4px;
+}
+
+.empty-note {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--paper-ink-faint);
+  margin: -8px 0 14px;
 }
 
 .cta {

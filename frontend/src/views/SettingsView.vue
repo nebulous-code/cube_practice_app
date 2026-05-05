@@ -133,7 +133,7 @@ async function onSignOutAll() {
 }
 
 function goBack() {
-  router.push('/')
+  router.push('/practice')
 }
 </script>
 

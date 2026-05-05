@@ -7,7 +7,10 @@ import CaseDetailView from '../views/CaseDetailView.vue'
 import CasesView from '../views/CasesView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import FreeStudyView from '../views/FreeStudyView.vue'
+import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
+import OnboardingView from '../views/OnboardingView.vue'
 import PracticeView from '../views/PracticeView.vue'
 import PrivacyView from '../views/PrivacyView.vue'
 import ProgressView from '../views/ProgressView.vue'
@@ -33,18 +36,33 @@ declare module 'vue-router' {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // Tabbed app shell — Practice (default) / Cases / Progress live as
-    // children so the bottom tab bar is shared. Auth-required at the
-    // shell level; checked via `to.matched.some()` in the guard.
+    // Public landing page. Authed visitors hitting `/` are bounced to
+    // /practice by the beforeEach guard below.
+    { path: '/', name: 'landing', component: LandingView },
+
+    // Tabbed app shell — Practice (default) / Cases / Progress. The shell
+    // mounts at /practice so `/` can be the public landing page; the Cases
+    // and Progress children use absolute paths to keep their URLs stable.
+    // Auth-required at the shell level; checked via `to.matched.some()` in
+    // the guard.
     {
-      path: '/',
+      path: '/practice',
       component: AppShell,
       meta: { requiresAuth: true },
       children: [
         { path: '', name: 'practice', component: PracticeView },
-        { path: 'cases', name: 'cases', component: CasesView },
-        { path: 'progress', name: 'progress', component: ProgressView },
+        { path: '/cases', name: 'cases', component: CasesView },
+        { path: '/progress', name: 'progress', component: ProgressView },
       ],
+    },
+
+    // Onboarding stub — first-run only, triggered by VerifyEmailView's
+    // success handler when has_seen_onboarding is false.
+    {
+      path: '/welcome',
+      name: 'welcome',
+      component: OnboardingView,
+      meta: { requiresAuth: true },
     },
     // Settings is full-bleed — no tab bar, has its own back button.
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
@@ -103,6 +121,11 @@ const router = createRouter({
       name: 'acknowledgements',
       component: AcknowledgementsView,
     },
+
+    // Catch-all 404 — public so deep-linked typos render a real "Not found"
+    // page instead of redirecting silently. The view itself reads
+    // authStore.status to pick the right CTA.
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
 })
 
@@ -112,6 +135,11 @@ router.beforeEach(async (to) => {
   // bootstrap() is idempotent — same promise is reused after the first call.
   await auth.bootstrap()
 
+  // Authed users hitting the public landing get bounced to their dashboard.
+  if (to.path === '/' && auth.status === 'authed') {
+    return '/practice'
+  }
+
   // Walk matched records so parent route's requiresAuth applies to children.
   const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
   if (requiresAuth && auth.status !== 'authed') {
@@ -120,7 +148,8 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guestOnly && auth.status === 'authed') {
     const nextRaw = to.query.next
-    const next = typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/'
+    const next =
+      typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/practice'
     return next
   }
 })

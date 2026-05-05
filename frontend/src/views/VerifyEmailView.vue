@@ -72,7 +72,13 @@ async function onSubmit() {
 
   try {
     await auth.verifyEmail(code.value, auth.pendingVerificationEmail)
-    router.push('/')
+    // First-time verifications land on the onboarding stub. Existing users
+    // (re-verifying after an email change, or signing in on a new device)
+    // already have the flag flipped server-side and skip straight to the
+    // dashboard. See M5 §5 — trigger lives here, not in a router guard.
+    const dest =
+      auth.user && auth.user.has_seen_onboarding === false ? '/welcome' : '/practice'
+    router.push(dest)
   } catch (err) {
     if (err instanceof ApiError) {
       formError.value = err.message

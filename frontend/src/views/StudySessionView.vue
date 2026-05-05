@@ -73,12 +73,12 @@ async function onGrade(grade: Grade) {
 
 function onEnd() {
   study.endSession()
-  router.push('/')
+  router.push('/practice')
 }
 
 function onDone() {
   study.endSession()
-  router.push('/')
+  router.push('/practice')
 }
 
 function dotBg(i: number): string {
@@ -104,7 +104,7 @@ const summaryLine = computed(() => {
 
 // Direct nav into /study with no queue (e.g. user reloaded) — bounce back.
 if (study.queue.length === 0 && study.status !== 'complete') {
-  router.replace('/')
+  router.replace('/practice')
 }
 </script>
 

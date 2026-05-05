@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
 import AuthHeader from '@/components/auth/AuthHeader.vue'
@@ -8,7 +8,6 @@ import AuthShell from '@/components/auth/AuthShell.vue'
 import Field from '@/components/auth/Field.vue'
 import PasswordField from '@/components/auth/PasswordField.vue'
 import PrimaryCTA from '@/components/auth/PrimaryCTA.vue'
-import TextLink from '@/components/auth/TextLink.vue'
 import { executeRecaptcha } from '@/composables/useRecaptcha'
 import { useAuthStore } from '@/stores/auth'
 
@@ -118,7 +117,8 @@ function goToLogin() {
     <template #footer>
       <p class="legal">
         By creating an account you agree to our
-        <TextLink>Terms</TextLink> and <TextLink>Privacy Policy</TextLink>.
+        <RouterLink to="/terms">Terms</RouterLink> and
+        <RouterLink to="/privacy">Privacy Policy</RouterLink>.
       </p>
     </template>
   </AuthShell>
@@ -138,5 +138,17 @@ function goToLogin() {
   color: var(--paper-ink-faint);
   line-height: 1.5;
   margin: 0;
+}
+
+.legal :deep(a) {
+  color: var(--paper-ink-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--paper-rule-faint);
+}
+
+.legal :deep(a:hover) {
+  color: var(--paper-ink);
+  text-decoration-color: var(--paper-rule);
 }
 </style>

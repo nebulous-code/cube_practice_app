@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CaseStatePip from '@/components/CaseStatePip.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import PatternDiagram from '@/components/PatternDiagram.vue'
 import { type Case, useCasesStore } from '@/stores/cases'
 
@@ -72,6 +73,12 @@ function goCase(id: string) {
   router.push(`/cases/${id}`)
 }
 
+function clearFilters() {
+  search.value = ''
+  tier1Filter.value = 'all'
+  tagFilter.value = new Set()
+}
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
@@ -105,6 +112,7 @@ function pad2(n: number): string {
         class="search"
         placeholder="Search nickname, number, algorithm…"
         autocomplete="off"
+        aria-label="Search cases"
       />
     </div>
 
@@ -139,9 +147,17 @@ function pad2(n: number): string {
       Couldn't load cases. {{ cases.error }}
       <button class="retry" type="button" @click="cases.refresh()">Retry</button>
     </div>
-    <div v-else-if="filteredCount === 0" class="state">
-      No cases match the current filter.
-    </div>
+    <EmptyState v-else-if="filteredCount === 0" class="empty-card">
+      <template #title>No cases match.</template>
+      <template #body>
+        Loosen the filters or clear them to see the full set.
+      </template>
+      <template #cta>
+        <button type="button" class="cta-clear" @click="clearFilters">
+          Clear filters
+        </button>
+      </template>
+    </EmptyState>
 
     <div v-else class="grid">
       <button
@@ -269,6 +285,27 @@ function pad2(n: number): string {
   background: var(--paper-ink);
   color: var(--paper-bg);
   border-color: var(--paper-ink);
+}
+
+.empty-card {
+  margin-top: 24px;
+}
+
+.cta-clear {
+  background: var(--paper-ink);
+  color: var(--paper-bg);
+  border: 1px solid var(--paper-ink);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.cta-clear:hover {
+  background: var(--paper-accent);
+  border-color: var(--paper-accent);
 }
 
 .state {

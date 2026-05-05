@@ -19,6 +19,7 @@ use crate::auth::{
 };
 use crate::email::{email_change_verification, password_reset, verification, ResendClient};
 use crate::error::{AppError, AppResult};
+use crate::onboarding;
 use crate::state::AppState;
 
 const VERIFICATION_TTL_MINUTES: i64 = 10;
@@ -41,6 +42,7 @@ pub fn router() -> Router<AppState> {
         .route("/auth/forgot-password", post(forgot_password))
         .route("/auth/reset-password", post(reset_password))
         .route("/auth/change-password", post(change_password))
+        .route("/auth/onboarding-complete", post(onboarding_complete))
         .route(
             "/auth/me",
             axum::routing::get(me).patch(update_me),
@@ -512,17 +514,19 @@ pub struct MeResponse {
     pending_email: Option<String>,
     display_name: String,
     email_verified: bool,
+    has_seen_onboarding: bool,
 }
 
 async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<MeResponse>> {
-    let row: Option<(Uuid, String, Option<String>, String, bool)> = sqlx::query_as(
-        "SELECT id, email, pending_email, display_name, email_verified FROM users WHERE id = $1",
+    let row: Option<(Uuid, String, Option<String>, String, bool, bool)> = sqlx::query_as(
+        "SELECT id, email, pending_email, display_name, email_verified, has_seen_onboarding \
+         FROM users WHERE id = $1",
     )
     .bind(user.user_id)
     .fetch_optional(&state.pool)
     .await?;
 
-    let (id, email, pending_email, display_name, email_verified) =
+    let (id, email, pending_email, display_name, email_verified, has_seen_onboarding) =
         row.ok_or(AppError::Unauthorized)?;
 
     Ok(Json(MeResponse {
@@ -531,6 +535,7 @@ async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<MeR
         pending_email,
         display_name,
         email_verified,
+        has_seen_onboarding,
     }))
 }
 
@@ -757,6 +762,23 @@ async fn change_password(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/onboarding-complete
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct OkResponse {
+    ok: bool,
+}
+
+async fn onboarding_complete(
+    State(state): State<AppState>,
+    user: AuthUser,
+) -> AppResult<Json<OkResponse>> {
+    onboarding::mark_seen(&state.pool, user.user_id).await?;
+    Ok(Json(OkResponse { ok: true }))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PATCH /auth/me
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -859,13 +881,14 @@ async fn update_me(
     }
 
     // Re-read and return the canonical record.
-    let row: Option<(Uuid, String, Option<String>, String, bool)> = sqlx::query_as(
-        "SELECT id, email, pending_email, display_name, email_verified FROM users WHERE id = $1",
+    let row: Option<(Uuid, String, Option<String>, String, bool, bool)> = sqlx::query_as(
+        "SELECT id, email, pending_email, display_name, email_verified, has_seen_onboarding \
+         FROM users WHERE id = $1",
     )
     .bind(user.user_id)
     .fetch_optional(&state.pool)
     .await?;
-    let (id, email, pending_email, display_name, email_verified) =
+    let (id, email, pending_email, display_name, email_verified, has_seen_onboarding) =
         row.ok_or(AppError::Unauthorized)?;
 
     tracing::info!(user_id = %id, "profile updated");
@@ -876,6 +899,7 @@ async fn update_me(
         pending_email,
         display_name,
         email_verified,
+        has_seen_onboarding,
     }))
 }
 

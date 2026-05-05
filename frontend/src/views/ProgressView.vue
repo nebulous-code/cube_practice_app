@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import CaseStatePip from '@/components/CaseStatePip.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { type Case, type CaseState, useCasesStore } from '@/stores/cases'
 import { useProgressStore } from '@/stores/progress'
 
@@ -34,6 +35,15 @@ const STATE_LABELS: Record<CaseState, string> = {
 }
 
 const counts = computed(() => progress.summary?.summary ?? null)
+
+// Fresh accounts: every case is `not_started` and the total reviewed is 0.
+// Show an EmptyState card above the list so the page doesn't read as a
+// wall of "Not started" rows. The list still renders below.
+const isFresh = computed(() => {
+  const s = progress.summary
+  if (!s) return false
+  return s.summary.not_started === s.total && s.total > 0
+})
 
 const filtered = computed<Case[]>(() => {
   const list = cases.list.slice().sort((a, b) => a.case_number - b.case_number)
@@ -96,11 +106,25 @@ function goCase(id: string) {
         Retry
       </button>
     </div>
-    <div v-else-if="filtered.length === 0" class="state">
+
+    <EmptyState v-if="isFresh" class="fresh-card">
+      <template #title>Nothing reviewed yet.</template>
+      <template #body>
+        Pick a case to start your first session — you'll see your standing
+        fill in here as you grade cases.
+      </template>
+      <template #cta>
+        <button type="button" class="cta" @click="router.push('/cases')">
+          Pick a case →
+        </button>
+      </template>
+    </EmptyState>
+
+    <div v-if="filtered.length === 0 && !isFresh" class="state">
       No cases match the current filter.
     </div>
 
-    <ul v-else class="list">
+    <ul v-if="filtered.length > 0" class="list">
       <li
         v-for="c in filtered"
         :key="c.id"
@@ -194,6 +218,27 @@ function goCase(id: string) {
 .chip-count {
   font-size: 11px;
   opacity: 0.75;
+}
+
+.fresh-card {
+  margin: 24px 0 16px;
+}
+
+.fresh-card .cta {
+  background: var(--paper-ink);
+  color: var(--paper-bg);
+  border: 1px solid var(--paper-ink);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fresh-card .cta:hover {
+  background: var(--paper-accent);
+  border-color: var(--paper-accent);
 }
 
 .state {

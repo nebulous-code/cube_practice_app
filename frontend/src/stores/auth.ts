@@ -26,6 +26,7 @@ export interface User {
   display_name: string
   pending_email: string | null
   email_verified: boolean
+  has_seen_onboarding: boolean
 }
 
 export type AuthStatus = 'loading' | 'guest' | 'authed'
@@ -181,6 +182,16 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data
   }
 
+  /// Mark the post-verification onboarding stub as seen for the current
+  /// user. Idempotent on the backend; safe to call from both the "Got it"
+  /// and "Skip" exits of OnboardingView.
+  async function completeOnboarding(): Promise<void> {
+    await api.post('/auth/onboarding-complete')
+    if (user.value) {
+      user.value = { ...user.value, has_seen_onboarding: true }
+    }
+  }
+
   /// Refetch /auth/me — useful after backgrounded actions might have changed
   /// pending_email or email_verified state.
   async function refreshMe(): Promise<User | null> {
@@ -211,6 +222,7 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     signOutAll,
     updateProfile,
+    completeOnboarding,
     refreshMe,
   }
 })
