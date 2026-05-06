@@ -22,6 +22,11 @@ const formError = ref<string | null>(null)
 
 const valid = computed(() => email.value.includes('@') && password.value.length > 0)
 
+function continueAsGuest() {
+  auth.startGuestMode()
+  router.push('/welcome')
+}
+
 async function onSubmit() {
   if (!valid.value || submitting.value) return
   submitting.value = true
@@ -91,6 +96,10 @@ async function onSubmit() {
         New here?
         <TextLink accent @click="router.push('/register')">Create an account</TextLink>
       </p>
+      <p class="row guest">
+        Just looking around?
+        <TextLink @click="continueAsGuest">Continue as guest →</TextLink>
+      </p>
     </template>
   </AuthShell>
 </template>
@@ -113,5 +122,11 @@ async function onSubmit() {
   font-size: 13px;
   color: var(--paper-ink-muted);
   margin: 0;
+}
+
+.row.guest {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--paper-ink-faint);
 }
 </style>

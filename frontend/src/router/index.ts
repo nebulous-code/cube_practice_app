@@ -7,6 +7,7 @@ import CaseDetailView from '../views/CaseDetailView.vue'
 import CasesView from '../views/CasesView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import FreeStudyView from '../views/FreeStudyView.vue'
+import GuestUpgradeScreen from '../views/GuestUpgradeScreen.vue'
 import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -63,6 +64,15 @@ const router = createRouter({
       name: 'welcome',
       component: OnboardingView,
       meta: { requiresAuth: true },
+    },
+
+    // Guest upgrade — registration variant that ships the localStorage
+    // blob so the backend imports it. Reachable from the guest banner
+    // and Settings while in guest mode.
+    {
+      path: '/upgrade',
+      name: 'upgrade',
+      component: GuestUpgradeScreen,
     },
     // Settings is full-bleed — no tab bar, has its own back button.
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
@@ -135,18 +145,29 @@ router.beforeEach(async (to) => {
   // bootstrap() is idempotent — same promise is reused after the first call.
   await auth.bootstrap()
 
-  // Authed users hitting the public landing get bounced to their dashboard.
-  if (to.path === '/' && auth.status === 'authed') {
+  // Authed and guest users alike hitting the public landing get bounced to
+  // their dashboard. Only fully-anon visitors stay on `/`.
+  if (to.path === '/' && (auth.isAuthed || auth.isGuest)) {
     return '/practice'
   }
 
   // Walk matched records so parent route's requiresAuth applies to children.
+  // M6 admits guest-mode users to the dashboard surfaces (Practice / Cases /
+  // Progress / Free Study / Study / Welcome / Settings) — only `'anon'`
+  // truly needs to be bounced to /login.
   const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
-  if (requiresAuth && auth.status !== 'authed') {
+  if (requiresAuth && auth.isAnon) {
     return { path: '/login', query: { next: to.fullPath } }
   }
 
-  if (to.meta.guestOnly && auth.status === 'authed') {
+  // Guest entering /welcome before completing onboarding is fine; if a
+  // guest already completed onboarding, send them on to /practice rather
+  // than re-running the stub.
+  if (to.path === '/welcome' && auth.isGuest && auth.guestState?.onboarding_completed) {
+    return '/practice'
+  }
+
+  if (to.meta.guestOnly && auth.isAuthed) {
     const nextRaw = to.query.next
     const next =
       typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/practice'

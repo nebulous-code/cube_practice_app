@@ -32,18 +32,24 @@ pub struct ListResponse {
 
 async fn list(
     State(state): State<AppState>,
-    user: AuthUser,
+    user: Option<AuthUser>,
 ) -> AppResult<Json<ListResponse>> {
-    let cases = cases::list_for_user(&state.pool, user.user_id).await?;
+    let cases = match user {
+        Some(u) => cases::list_for_user(&state.pool, u.user_id).await?,
+        None => cases::list_global(&state.pool).await?,
+    };
     Ok(Json(ListResponse { cases }))
 }
 
 async fn detail(
     State(state): State<AppState>,
-    user: AuthUser,
+    user: Option<AuthUser>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<Case>> {
-    let case = cases::get_for_user(&state.pool, user.user_id, id).await?;
+    let case = match user {
+        Some(u) => cases::get_for_user(&state.pool, u.user_id, id).await?,
+        None => cases::get_global(&state.pool, id).await?,
+    };
     Ok(Json(case))
 }
 

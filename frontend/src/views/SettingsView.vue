@@ -143,11 +143,27 @@ function goBack() {
 
     <header>
       <p class="eyebrow">Settings</p>
-      <h1>Your account</h1>
+      <h1>{{ auth.isGuest ? 'Practicing as a guest' : 'Your account' }}</h1>
     </header>
 
+    <!-- Guest-mode upgrade CTA — visible only in guest mode. -->
+    <section v-if="auth.isGuest" class="card guest-card">
+      <p class="section-eyebrow">Save your progress</p>
+      <p class="guest-body">
+        Guest data lives on this device only. Create an account and we'll
+        fold every review, override, and tag into it without re-grading.
+      </p>
+      <button
+        type="button"
+        class="primary"
+        @click="router.push('/upgrade')"
+      >
+        Create account & save progress →
+      </button>
+    </section>
+
     <!-- Account section -->
-    <section class="card">
+    <section v-if="!auth.isGuest" class="card">
       <p class="section-eyebrow">Account</p>
       <Field
         v-model="displayName"
@@ -181,7 +197,7 @@ function goBack() {
     </section>
 
     <!-- Security section -->
-    <section class="card">
+    <section v-if="!auth.isGuest" class="card">
       <p class="section-eyebrow">Security</p>
 
       <PasswordField
@@ -227,8 +243,8 @@ function goBack() {
       </nav>
     </section>
 
-    <!-- Sign out / Sign out everywhere -->
-    <section class="card">
+    <!-- Sign out / Sign out everywhere — authed only; guests have no session. -->
+    <section v-if="!auth.isGuest" class="card">
       <p class="section-eyebrow">Sessions</p>
       <button class="ghost" type="button" @click="onSignOut">Sign out</button>
 
@@ -418,6 +434,18 @@ h1 {
   font-size: 14px;
   color: var(--paper-ink);
   text-decoration: none;
+}
+
+.guest-card {
+  border-color: var(--paper-rule);
+}
+
+.guest-body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--paper-ink-muted);
+  margin: 0 0 12px;
 }
 
 .legal-links a:hover {

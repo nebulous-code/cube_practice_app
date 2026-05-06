@@ -9,6 +9,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { api } from '@/api/client'
+import { applyGuestPatch, mergeGuestSettings } from '@/lib/guest/cases-merge'
+import { useAuthStore } from '@/stores/auth'
 
 export type CaseState = 'not_started' | 'learning' | 'due' | 'mastered'
 
@@ -68,15 +70,29 @@ export const useCasesStore = defineStore('cases', () => {
     )
   })
 
+  // Cached global case list — only populated in guest mode, where we
+  // re-merge against the localStorage blob on every settings change
+  // without making a fresh API round-trip.
+  const guestGlobals = ref<Case[]>([])
+
   async function ensureLoaded(): Promise<void> {
     if (status.value === 'ready') return
     if (inflight) return inflight
     inflight = (async () => {
       status.value = 'loading'
       error.value = null
+      const auth = useAuthStore()
       try {
+        // In all modes the network call is the same: anonymous → globals,
+        // authed → server-merged. M6 §4.
         const response = await api.get<ListResponse>('/cases')
-        list.value = response.data.cases
+        if (auth.isGuest && auth.guestState) {
+          guestGlobals.value = response.data.cases
+          list.value = mergeGuestSettings(response.data.cases, auth.guestState)
+        } else {
+          guestGlobals.value = []
+          list.value = response.data.cases
+        }
         status.value = 'ready'
       } catch (err) {
         status.value = 'error'
@@ -98,7 +114,27 @@ export const useCasesStore = defineStore('cases', () => {
   /// `undefined | null | value` semantics as the backend: `undefined`
   /// (omit from payload) leaves the override alone; `null` clears it;
   /// a value sets it. The merged response replaces the cached row.
+  ///
+  /// In guest mode the patch is applied to the localStorage blob and
+  /// the merged list is recomputed locally — no network call.
   async function updateSettings(id: string, patch: SettingsPatch): Promise<Case> {
+    const auth = useAuthStore()
+    if (auth.isGuest && auth.guestState) {
+      const target = list.value.find((c) => c.id === id)
+      if (!target) throw new Error(`Unknown case ${id}`)
+      const idIndex = new Map(guestGlobals.value.map((c) => [c.id, c.case_number]))
+      auth.updateGuestState((s) => {
+        // applyGuestPatch returns a new blob; mutate in place via the
+        // updateGuestState mutator so saveGuestState picks up the change.
+        const patched = applyGuestPatch(s, target.case_number, patch, idIndex)
+        s.settings = patched.settings
+      })
+      list.value = mergeGuestSettings(guestGlobals.value, auth.guestState)
+      const merged = list.value.find((c) => c.id === id)
+      if (!merged) throw new Error(`Case ${id} disappeared after merge`)
+      return merged
+    }
+
     const response = await api.patch<Case>(`/cases/${id}/settings`, patch)
     const merged = response.data
     const idx = list.value.findIndex((c) => c.id === id)
@@ -108,6 +144,7 @@ export const useCasesStore = defineStore('cases', () => {
 
   function $reset() {
     list.value = []
+    guestGlobals.value = []
     status.value = 'idle'
     error.value = null
     inflight = null

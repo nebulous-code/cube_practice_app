@@ -1,13 +1,25 @@
 <script setup lang="ts">
-// Public landing page at `/`. Authed visitors are redirected to /practice
-// by the router guard, so this view never renders for signed-in users.
+// Public landing page at `/`. Authed (and guest-mode) visitors are
+// redirected to /practice by the router guard, so this view only renders
+// for fully-anon visitors.
 //
 // Copy is placeholder — see docs/TODO.md "Landing page copy" for the swap
 // point. Layout follows docs/milestones/05_polish_and_static_pages.md §5.
+// M6 swapped the primary hero CTA from "Sign in" to "Continue as guest"
+// per the user's clarification on guest_mode_design_doc Q-B.
 
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 import LogoMark from '@/components/auth/LogoMark.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const auth = useAuthStore()
+
+function startAsGuest() {
+  auth.startGuestMode()
+  router.push('/welcome')
+}
 </script>
 
 <template>
@@ -29,7 +41,9 @@ import LogoMark from '@/components/auth/LogoMark.vue'
           the cases you don't yet know, and keep the ones you do sharp.
         </p>
         <div class="cta-row">
-          <RouterLink to="/login" class="cta primary">Sign in →</RouterLink>
+          <button type="button" class="cta primary" @click="startAsGuest">
+            Continue as guest →
+          </button>
           <RouterLink to="/register" class="cta secondary">Create an account</RouterLink>
         </div>
       </section>
@@ -173,6 +187,11 @@ main {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+button.cta {
+  appearance: none;
 }
 
 .cta.primary {

@@ -14,6 +14,7 @@ pub mod config;
 pub mod db;
 pub mod email;
 pub mod error;
+pub mod guest_state;
 pub mod onboarding;
 pub mod progress;
 pub mod routes;

@@ -40,7 +40,20 @@ pub struct Case {
 
 /// Maximum length of a single tag, in characters. Enforced by
 /// `normalize_tags` — over-cap inputs return Err.
-pub const TAG_MAX_LEN: usize = 60;
+pub const TAG_MAX_LEN: usize = 50;
+
+/// Maximum distinct tags any one user can accumulate across all their
+/// per-case overrides. Enforced by `validate_tag_caps` on every write.
+/// See docs/milestones/06_guest_mode.md §2 / §4 — the cap is shared
+/// between the authed write path and the guest-state import path so
+/// the data shape is consistent across modes.
+pub const MAX_DISTINCT_TAGS_PER_USER: usize = 100;
+
+/// Maximum total tag-links any one user can accumulate (sum of
+/// cardinalities across all their settings.tags arrays). Independent
+/// from the distinct-tag cap; "fish" applied to 50 cases counts as 50
+/// links but only 1 distinct tag.
+pub const MAX_TAG_LINKS_PER_USER: usize = 1000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -221,6 +234,20 @@ pub async fn get_for_user(
     row.map(MergedRow::into_api).ok_or(AppError::NotFound)
 }
 
+/// Anonymous read of every case — no overrides, no progress, every row
+/// returns the global default and `state = not_started`. Used by the
+/// public `GET /cases` for guest mode (M6 §4). Implemented by passing
+/// `Uuid::nil()` to the user-keyed merge: the LEFT JOIN finds no rows,
+/// so COALESCE falls through to the global cases values for every field.
+pub async fn list_global(pool: &PgPool) -> AppResult<Vec<Case>> {
+    list_for_user(pool, Uuid::nil()).await
+}
+
+/// Anonymous read of a single case. Same convention as `list_global`.
+pub async fn get_global(pool: &PgPool, case_id: Uuid) -> AppResult<Case> {
+    get_for_user(pool, Uuid::nil(), case_id).await
+}
+
 /// Per-field patch. `None` = "leave whatever was there alone";
 /// `Some(None)` = "clear the override"; `Some(Some(v))` = "set override".
 /// Mirrors the `Option<Option<T>>` shape used by the PATCH route.
@@ -279,6 +306,71 @@ pub fn normalize_tags(input: Vec<String>) -> Result<Vec<String>, String> {
     Ok(out)
 }
 
+/// Validate that applying `new_tags` to (user_id, case_id) wouldn't push
+/// the user over either of the per-user tag caps. Reads every other
+/// `user_case_settings` row for this user and tallies distinct + total
+/// counts as if the patch had landed. Returns an `AppError::Validation`
+/// when over either cap.
+///
+/// `new_tags` is the post-resolve tag set for the case being updated —
+/// `None` or an empty slice means "no override," contributing zero links
+/// and zero distinct tags from this case.
+pub async fn validate_tag_caps(
+    pool: &PgPool,
+    user_id: Uuid,
+    case_id: Uuid,
+    new_tags: Option<&[String]>,
+) -> AppResult<()> {
+    let other_rows: Vec<(Vec<String>,)> = sqlx::query_as(
+        "SELECT tags FROM user_case_settings \
+         WHERE user_id = $1 AND case_id <> $2 AND tags IS NOT NULL",
+    )
+    .bind(user_id)
+    .bind(case_id)
+    .fetch_all(pool)
+    .await?;
+
+    let new_tags = new_tags.unwrap_or(&[]);
+    let mut total_links: usize = new_tags.len();
+    let mut distinct: std::collections::HashSet<String> =
+        new_tags.iter().cloned().collect();
+
+    for (tags,) in other_rows {
+        total_links += tags.len();
+        for t in tags {
+            distinct.insert(t);
+        }
+    }
+
+    let mut fields: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    if total_links > MAX_TAG_LINKS_PER_USER {
+        fields.insert(
+            "tags".into(),
+            format!(
+                "Total tag-links ({}) exceeds the per-user limit of {}.",
+                total_links, MAX_TAG_LINKS_PER_USER
+            ),
+        );
+    } else if distinct.len() > MAX_DISTINCT_TAGS_PER_USER {
+        // Only surface the distinct-cap message if the link cap passed —
+        // single error reads cleaner than two.
+        fields.insert(
+            "tags".into(),
+            format!(
+                "Distinct tags ({}) exceeds the per-user limit of {}.",
+                distinct.len(),
+                MAX_DISTINCT_TAGS_PER_USER
+            ),
+        );
+    }
+    if fields.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::Validation(fields))
+    }
+}
+
 /// Apply a `SettingsPatch` for the (user, case) pair. Reads the existing
 /// override row (if any), merges the patch with the documented `Option<Option>`
 /// semantics, then either deletes the row (all fields null) or upserts it.
@@ -332,6 +424,14 @@ pub async fn update_settings(
         .await?;
 
     let resolved = resolve(&patch, existing);
+
+    // Tag-cap check runs after the in-memory merge so it sees the
+    // would-be post-patch state. Only meaningful when this patch is
+    // actually setting tags; clearing or leaving them alone can never
+    // push the user over the caps.
+    if matches!(patch.tags, Some(Some(_))) {
+        validate_tag_caps(pool, user_id, case_id, resolved.tags.as_deref()).await?;
+    }
 
     if resolved.is_all_null() {
         sqlx::query("DELETE FROM user_case_settings WHERE user_id = $1 AND case_id = $2")

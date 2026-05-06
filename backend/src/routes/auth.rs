@@ -19,6 +19,7 @@ use crate::auth::{
 };
 use crate::email::{email_change_verification, password_reset, verification, ResendClient};
 use crate::error::{AppError, AppResult};
+use crate::guest_state::{GuestState, MergeSummary};
 use crate::onboarding;
 use crate::state::AppState;
 
@@ -43,6 +44,7 @@ pub fn router() -> Router<AppState> {
         .route("/auth/reset-password", post(reset_password))
         .route("/auth/change-password", post(change_password))
         .route("/auth/onboarding-complete", post(onboarding_complete))
+        .route("/auth/merge-guest-state", post(merge_guest_state))
         .route(
             "/auth/me",
             axum::routing::get(me).patch(update_me),
@@ -62,6 +64,11 @@ pub struct RegisterRequest {
     /// is acceptable when `RECAPTCHA_SECRET_KEY` is unset on the backend.
     #[serde(default)]
     recaptcha_token: String,
+    /// Optional guest-mode state to import. When present, validated and
+    /// imported in the same transaction as user creation — see
+    /// `docs/milestones/06_guest_mode.md` §4.
+    #[serde(default)]
+    guest_state: Option<GuestState>,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,9 +97,19 @@ async fn register(
     validate_register(&display_name, &email, &req.password)?;
     state.recaptcha.verify(&req.recaptcha_token).await?;
 
+    // Validate the guest blob (if any) up front so a malformed payload
+    // never creates a user row in the first place.
+    if let Some(ref gs) = req.guest_state {
+        gs.validate()?;
+    }
+
     let password_hash = hash_password(&req.password, state.argon2)?;
     let code = six_digit_code();
     let expires = Utc::now() + Duration::minutes(VERIFICATION_TTL_MINUTES);
+
+    // Wrap user-creation + (optional) guest-state import in one transaction
+    // so a mid-import failure rolls back the half-created user.
+    let mut tx = state.pool.begin().await?;
 
     let row: Result<(Uuid, String, String, bool), sqlx::Error> = sqlx::query_as(
         r#"
@@ -106,7 +123,7 @@ async fn register(
     .bind(&password_hash)
     .bind(&code)
     .bind(expires)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *tx)
     .await;
 
     let (id, email, display_name, email_verified) = match row {
@@ -114,6 +131,12 @@ async fn register(
         Err(e) if is_unique_violation(&e) => return Err(AppError::EmailInUse),
         Err(e) => return Err(e.into()),
     };
+
+    if let Some(ref gs) = req.guest_state {
+        gs.import(&mut tx, id).await?;
+    }
+
+    tx.commit().await?;
 
     send_verification_email(&state.email, &email, &code).await?;
 
@@ -776,6 +799,38 @@ async fn onboarding_complete(
 ) -> AppResult<Json<OkResponse>> {
     onboarding::mark_seen(&state.pool, user.user_id).await?;
     Ok(Json(OkResponse { ok: true }))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /auth/merge-guest-state
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct MergeGuestStateRequest {
+    guest_state: GuestState,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MergeGuestStateResponse {
+    ok: bool,
+    merged: MergeSummary,
+}
+
+async fn merge_guest_state(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(req): Json<MergeGuestStateRequest>,
+) -> AppResult<Json<MergeGuestStateResponse>> {
+    req.guest_state.validate()?;
+
+    let mut tx = state.pool.begin().await?;
+    let summary = req.guest_state.merge(&mut tx, user.user_id).await?;
+    tx.commit().await?;
+
+    Ok(Json(MergeGuestStateResponse {
+        ok: true,
+        merged: summary,
+    }))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

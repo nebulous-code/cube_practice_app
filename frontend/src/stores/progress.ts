@@ -6,6 +6,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { api } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
+import { useCasesStore } from '@/stores/cases'
 import type { Streak } from '@/stores/study'
 
 export interface ProgressCounts {
@@ -53,6 +55,28 @@ export const useProgressStore = defineStore('progress', () => {
     status.value = 'loading'
     error.value = null
     try {
+      const auth = useAuthStore()
+      if (auth.isGuest && auth.guestState) {
+        const cases = useCasesStore()
+        await cases.ensureLoaded()
+        const counts: ProgressCounts = {
+          not_started: 0,
+          learning: 0,
+          due: 0,
+          mastered: 0,
+        }
+        for (const c of cases.list) counts[c.state] += 1
+        summary.value = {
+          summary: counts,
+          total: cases.list.length,
+          streak: {
+            count: auth.guestState.streak_count,
+            last_practice_date: auth.guestState.last_practice_date,
+          },
+        }
+        status.value = 'ready'
+        return
+      }
       const response = await api.get<ProgressSummary>('/progress')
       summary.value = response.data
       status.value = 'ready'

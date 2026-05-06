@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 
+import GuestMergePrompt from '@/components/GuestMergePrompt.vue'
 import SplashView from '@/components/SplashView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -21,5 +22,8 @@ const splashPinned = computed(() => {
 
 <template>
   <SplashView v-if="splashPinned || auth.status === 'loading'" />
-  <RouterView v-else />
+  <template v-else>
+    <RouterView />
+    <GuestMergePrompt />
+  </template>
 </template>

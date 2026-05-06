@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
 
+import GuestBanner from '@/components/GuestBanner.vue'
 import PendingEmailBanner from '@/components/PendingEmailBanner.vue'
 import TabBar from '@/components/TabBar.vue'
 
@@ -39,6 +40,7 @@ function goSettings() {
     <main class="content">
       <RouterView />
     </main>
+    <GuestBanner />
     <TabBar />
   </div>
 </template>
