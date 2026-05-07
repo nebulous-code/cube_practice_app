@@ -83,13 +83,7 @@ function goUpgrade() {
 
 <style scoped>
 .banner {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
-  left: 0;
-  right: 0;
-  z-index: 4;
   background: var(--paper-card);
-  border-top: 1px solid var(--paper-rule-faint);
   border-bottom: 1px solid var(--paper-rule-faint);
   padding: 10px 16px;
   display: flex;

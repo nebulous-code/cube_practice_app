@@ -16,6 +16,11 @@ const study = useStudyStore()
 
 const ROUTE_ID = computed(() => String(route.params.id ?? ''))
 
+// When the user got here from the in-flight study session via the Edit
+// button on the reveal screen, both Save and Back should drop them
+// back into /study so the same card re-shows unrevealed.
+const fromStudy = computed(() => route.query.from === 'study')
+
 // ─── Loading ────────────────────────────────────────────────────────────────
 const current = ref<Case | null>(null)
 const loadStatus = ref<'idle' | 'loading' | 'ready' | 'error' | 'not-found'>('idle')
@@ -29,12 +34,14 @@ async function loadCase() {
   if (cached) {
     current.value = cached
     loadStatus.value = 'ready'
+    if (fromStudy.value) startEdit()
     return
   }
   try {
     const response = await api.get<Case>(`/cases/${ROUTE_ID.value}`)
     current.value = response.data
     loadStatus.value = 'ready'
+    if (fromStudy.value) startEdit()
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       loadStatus.value = 'not-found'
@@ -100,6 +107,9 @@ function tagsEqual(a: string[], b: string[]): boolean {
 
 function cancelEdit() {
   editing.value = false
+  if (fromStudy.value && study.queue.length > 0) {
+    router.push('/study')
+  }
 }
 
 const ROTATION_LABELS = ['0°', '90° CW', '180°', '90° CCW']
@@ -200,6 +210,10 @@ async function onSave() {
     const merged = await cases.updateSettings(current.value.id, patch)
     current.value = merged
     editing.value = false
+    if (fromStudy.value && study.queue.length > 0) {
+      router.push('/study')
+      return
+    }
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.code === 'validation') fieldErrors.value = err.fields
@@ -218,6 +232,10 @@ onMounted(() => {
 })
 
 function goBack() {
+  if (fromStudy.value && study.queue.length > 0) {
+    router.push('/study')
+    return
+  }
   if (window.history.length > 1) router.back()
   else router.push('/cases')
 }

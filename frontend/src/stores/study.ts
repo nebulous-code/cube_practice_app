@@ -42,6 +42,17 @@ export interface SessionResult {
   grade: Grade
 }
 
+// Fisher-Yates in place. Used at session start so the same set of cases
+// doesn't drill in the same sequence every day — pattern recognition,
+// not positional recognition.
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
+  }
+  return arr
+}
+
 export const useStudyStore = defineStore('study', () => {
   const queue = ref<Case[]>([])
   const index = ref(0)
@@ -49,6 +60,10 @@ export const useStudyStore = defineStore('study', () => {
   const status = ref<SessionStatus>('idle')
   const streak = ref<Streak>({ count: 0, last_practice_date: null })
   const error = ref<string | null>(null)
+
+  // The unshuffled set the current/last session was started from. Lets
+  // "Repeat session" replay the same cards in a freshly-shuffled order.
+  const sessionSeed = ref<Case[]>([])
 
   const currentCase = computed<Case | null>(() => queue.value[index.value] ?? null)
   const remaining = computed(() => Math.max(0, queue.value.length - index.value))
@@ -89,6 +104,7 @@ export const useStudyStore = defineStore('study', () => {
     const found = cases.byId(caseId)
     if (!found) return false
     queue.value = [found]
+    sessionSeed.value = [found]
     index.value = 0
     results.value = []
     status.value = 'in_session'
@@ -97,18 +113,33 @@ export const useStudyStore = defineStore('study', () => {
 
   /// Build a multi-card session. With no argument, uses the loaded due
   /// queue (set by `loadDue`). With an explicit `customQueue`, uses that
-  /// list verbatim — this is how free-study sessions feed in.
+  /// list as the session source — free-study sessions feed in this way.
+  /// The queue is shuffled at session start; the unshuffled source is
+  /// retained on `sessionSeed` so `repeatSession()` can re-run the same
+  /// set in a fresh order.
   function startSession(customQueue?: Case[]): boolean {
+    let source: Case[]
     if (customQueue !== undefined) {
       if (customQueue.length === 0) return false
-      queue.value = customQueue.slice()
+      source = customQueue.slice()
     } else if (queue.value.length === 0) {
       return false
+    } else {
+      source = queue.value.slice()
     }
+    sessionSeed.value = source.slice()
+    queue.value = shuffleInPlace(source.slice())
     index.value = 0
     results.value = []
     status.value = 'in_session'
     return true
+  }
+
+  /// Re-run the current session's source set in a fresh shuffled order.
+  /// Useful after session-complete for focused free-study drills.
+  function repeatSession(): boolean {
+    if (sessionSeed.value.length === 0) return false
+    return startSession(sessionSeed.value)
   }
 
   async function submitGrade(grade: Grade): Promise<void> {
@@ -195,6 +226,7 @@ export const useStudyStore = defineStore('study', () => {
     index.value = 0
     results.value = []
     status.value = 'idle'
+    sessionSeed.value = []
   }
 
   function $reset() {
@@ -204,6 +236,7 @@ export const useStudyStore = defineStore('study', () => {
     status.value = 'idle'
     streak.value = { count: 0, last_practice_date: null }
     error.value = null
+    sessionSeed.value = []
   }
 
   return {
@@ -218,6 +251,7 @@ export const useStudyStore = defineStore('study', () => {
     loadDue,
     startSingle,
     startSession,
+    repeatSession,
     submitGrade,
     endSession,
     $reset,

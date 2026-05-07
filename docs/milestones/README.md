@@ -131,6 +131,25 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 
 ---
 
+## Milestone 7 — Delete Account
+
+**Goal:** Authenticated user can permanently delete their account and all associated data. Required pre-launch for legal compliance (GDPR Article 17, CCPA right-to-delete) and standard web-app expectation.
+
+**Done when:**
+- `DELETE /auth/me` endpoint, password-gated; deletes the `users` row and lets the existing `ON DELETE CASCADE` foreign keys clean up sessions / settings / progress
+- SettingsView shows a "Delete account" card (authed users only) with a two-step confirm pane mirroring the existing "Sign out everywhere" pattern
+- Post-delete: local state cleared, browser routes to `/login?deleted=1`, a one-line "Account deleted." note shows on the login screen
+- Cascade-audit test guards against future migrations silently dropping the cleanup behavior
+- Manual QA on real iOS Safari + Android Chrome
+
+**Backend:** `DELETE /auth/me` route in `routes/auth.rs`, per-user rate-limit key, schema-introspection cascade test.
+
+**Frontend:** `auth.deleteAccount()` action, SettingsView delete card, LoginView post-delete note.
+
+**Out of scope:** Soft delete / 30-day recovery window. Data export ("Download my data") before deletion. Email confirmation (password gate is sufficient). Audit log table. A "Discard guest data" Settings entry for guest mode (separate ticket).
+
+---
+
 ## Parallelization opportunities
 
 The milestones above are listed in the natural completion order, but some work can run in parallel without breaking the "always green" rule:

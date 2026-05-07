@@ -37,10 +37,10 @@ function goSettings() {
       </svg>
     </button>
 
+    <GuestBanner />
     <main class="content">
       <RouterView />
     </main>
-    <GuestBanner />
     <TabBar />
   </div>
 </template>

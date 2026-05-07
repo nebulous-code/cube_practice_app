@@ -104,9 +104,9 @@ function startSession() {
         v-else
         type="button"
         class="ghost"
-        @click="router.push('/cases')"
+        @click="router.push('/free-study')"
       >
-        Browse cases
+        Free study →
       </button>
     </section>
 
@@ -140,6 +140,7 @@ function startSession() {
     </section>
 
     <button
+      v-if="dueCount > 0"
       type="button"
       class="free-study-link"
       @click="router.push('/free-study')"

@@ -35,13 +35,22 @@ interface RatingChip {
 const RATINGS: ReadonlyArray<RatingChip> = [
   { key: 'fail', grade: 0, label: 'Fail', hint: 'Missed it', fill: 'rgba(193, 70, 70, 0.10)', border: 'rgba(193, 70, 70, 0.40)' },
   { key: 'hard', grade: 1, label: 'Hard', hint: 'Got it slowly', fill: 'rgba(195, 130, 50, 0.12)', border: 'rgba(195, 130, 50, 0.45)' },
-  { key: 'good', grade: 2, label: 'Good', hint: 'Solid recall', fill: 'rgba(74, 124, 62, 0.12)', border: 'rgba(74, 124, 62, 0.45)' },
-  { key: 'easy', grade: 3, label: 'Easy', hint: 'Instant', fill: 'rgba(60, 110, 160, 0.12)', border: 'rgba(60, 110, 160, 0.45)' },
+  { key: 'good', grade: 2, label: 'Good', hint: 'Solid recall', fill: 'rgba(60, 110, 160, 0.12)', border: 'rgba(60, 110, 160, 0.45)' },
+  { key: 'easy', grade: 3, label: 'Easy', hint: 'Instant', fill: 'rgba(74, 124, 62, 0.12)', border: 'rgba(74, 124, 62, 0.45)' },
 ]
 
 const ROTATION_LABELS = ['no rotation', 'rotated 90° CW', 'rotated 180°', 'rotated 90° CCW']
 
-const current = computed(() => study.currentCase)
+// Always re-resolve the current card through the cases store so edits
+// made via the Edit button below show their new algorithm/result on
+// return to the study session — study.queue holds the references that
+// were captured at session start, and Pinia replaces (rather than
+// mutates) the entry in cases.list when settings update.
+const current = computed(() => {
+  const c = study.currentCase
+  if (!c) return null
+  return cases.byId(c.id) ?? c
+})
 const queueLen = computed(() => study.queue.length)
 const positionLabel = computed(() => `${study.index + 1} of ${queueLen.value}`)
 
@@ -79,6 +88,22 @@ function onEnd() {
 function onDone() {
   study.endSession()
   router.push('/practice')
+}
+
+function onRepeat() {
+  if (!study.repeatSession()) return
+  // Component re-mounts only on route change; force a fresh reveal-state
+  // by resetting the local refs and bouncing if we're already on /study.
+  revealed.value = false
+  submitting.value = false
+}
+
+function onEdit() {
+  if (!current.value) return
+  router.push({
+    path: `/cases/${current.value.id}`,
+    query: { from: 'study' },
+  })
 }
 
 function dotBg(i: number): string {
@@ -151,11 +176,6 @@ if (study.queue.length === 0 && study.status !== 'complete') {
 
       <template v-else>
         <div class="reveal-block">
-          <p class="reveal-eyebrow">Algorithm</p>
-          <pre class="algorithm">{{ current.algorithm }}</pre>
-        </div>
-
-        <div class="reveal-block">
           <p class="reveal-eyebrow">Should become</p>
           <div class="result-card">
             <PatternDiagram :pattern="resultPattern" :size="78" />
@@ -189,6 +209,16 @@ if (study.queue.length === 0 && study.status !== 'complete') {
             </button>
           </div>
         </div>
+
+        <div class="reveal-block">
+          <div class="reveal-head">
+            <p class="reveal-eyebrow">Algorithm</p>
+            <button type="button" class="edit-link" @click="onEdit">
+              Edit →
+            </button>
+          </div>
+          <pre class="algorithm">{{ current.algorithm }}</pre>
+        </div>
       </template>
     </section>
 
@@ -205,9 +235,14 @@ if (study.queue.length === 0 && study.status !== 'complete') {
         </div>
       </div>
 
-      <button class="primary done" type="button" @click="onDone">
-        Back to practice
-      </button>
+      <div class="complete-actions">
+        <button class="primary done" type="button" @click="onRepeat">
+          Repeat session
+        </button>
+        <button class="ghost done" type="button" @click="onDone">
+          Back to practice
+        </button>
+      </div>
     </section>
   </main>
 </template>
@@ -348,6 +383,34 @@ if (study.queue.length === 0 && study.status !== 'complete') {
   color: var(--paper-ink-faint);
   font-weight: 500;
   margin: 0 0 6px;
+}
+
+.reveal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.reveal-head .reveal-eyebrow {
+  margin: 0;
+}
+
+.edit-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--paper-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-link:hover {
+  opacity: 0.8;
 }
 
 .algorithm {
@@ -500,5 +563,31 @@ if (study.queue.length === 0 && study.status !== 'complete') {
 
 .done {
   max-width: 320px;
+}
+
+.complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--paper-ink);
+  border: 1px solid var(--paper-rule);
+  border-radius: 12px;
+  padding: 13px 22px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+}
+
+.ghost:hover {
+  border-color: var(--paper-ink);
 }
 </style>
