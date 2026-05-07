@@ -30,6 +30,8 @@ A web-based spaced repetition flashcard app for Rubik's cube algorithm practice.
 - Additional public-facing marketing pages (features, pricing, FAQ, etc.) beyond the M5 landing page
 - Full accessibility audit — screen-reader walkthrough, ARIA live regions, complete WCAG AA review (M5 ships a basic pass: keyboard nav, focus rings, form labels, spot-check contrast)
 - **Per-user timezone + local-midnight rollover** for streak/due-date comparisons. MVP uses server UTC date for "today" — a user in PST sees streaks tick at 5 PM Pacific (00:00 UTC). Post-MVP: store `users.timezone`, roll over at user-local midnight. Two reviews near UTC midnight currently can fall on different "today" values; that goes away with per-user rollover.
+- **"Download my data" / data export before account deletion.** Deferred from M7 (`docs/milestones/07_delete_account.md`). MVP delete is straight hard-delete; a JSON dump endpoint + Settings-side download flow can layer in once explicit user demand surfaces.
+- **Guest mode "Discard guest data" Settings entry.** Deferred from M7. Trivially `clearGuestState()`, but the UX (confirmation pane, warning copy) deserves its own design pass — the existing M7 deletion flow is account-scoped and doesn't apply.
 
 ### Out of Scope (MVP)
 - Native mobile app

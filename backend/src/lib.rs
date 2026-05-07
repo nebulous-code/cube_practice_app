@@ -8,6 +8,7 @@ use axum::Router;
 use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+pub mod account_delete;
 pub mod auth;
 pub mod cases;
 pub mod config;

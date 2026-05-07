@@ -9,6 +9,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::account_delete;
 use crate::auth::{
     code::six_digit_code,
     cookie::clear_session_cookie,
@@ -31,6 +32,7 @@ const REGISTER_PER_IP: (usize, StdDuration) = (10, StdDuration::from_secs(60 * 6
 const LOGIN_PER_IP: (usize, StdDuration) = (20, StdDuration::from_secs(60));
 const RESEND_PER_KEY: (usize, StdDuration) = (1, StdDuration::from_secs(60));
 const FORGOT_PER_EMAIL: (usize, StdDuration) = (3, StdDuration::from_secs(60 * 60));
+const DELETE_PER_USER: (usize, StdDuration) = (3, StdDuration::from_secs(60 * 60));
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -47,7 +49,9 @@ pub fn router() -> Router<AppState> {
         .route("/auth/merge-guest-state", post(merge_guest_state))
         .route(
             "/auth/me",
-            axum::routing::get(me).patch(update_me),
+            axum::routing::get(me)
+                .patch(update_me)
+                .delete(delete_account),
         )
 }
 
@@ -596,6 +600,34 @@ async fn sign_out_all(
     tracing::info!(user_id = %user.user_id, "user signed out everywhere");
 
     Ok((jar.add(clear_session_cookie()), Json(EmptyResponse {})))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /auth/me
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteAccountRequest {
+    current_password: String,
+}
+
+async fn delete_account(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    user: AuthUser,
+    Json(req): Json<DeleteAccountRequest>,
+) -> AppResult<(CookieJar, Json<OkResponse>)> {
+    enforce_limit(
+        &state.rate_limit,
+        &format!("delete:user:{}", user.user_id),
+        DELETE_PER_USER,
+    )?;
+
+    account_delete::delete_account(&state.pool, user.user_id, &req.current_password).await?;
+
+    tracing::info!(user_id = %user.user_id, "account deleted");
+
+    Ok((jar.add(clear_session_cookie()), Json(OkResponse { ok: true })))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
@@ -19,6 +19,15 @@ const email = ref('')
 const password = ref('')
 const submitting = ref(false)
 const formError = ref<string | null>(null)
+
+// Post-delete note. Set when the user lands here from the Settings →
+// Delete account flow (`router.push('/login?deleted=1')`). Cleared on
+// the first email-field keystroke so it doesn't linger after the user
+// starts a fresh sign-in attempt.
+const showDeletedNote = ref(route.query.deleted === '1')
+watch(email, () => {
+  if (showDeletedNote.value) showDeletedNote.value = false
+})
 
 const valid = computed(() => email.value.includes('@') && password.value.length > 0)
 
@@ -65,6 +74,10 @@ async function onSubmit() {
   <AuthShell>
     <AuthHeader mark eyebrow="Welcome back" title="Sign in" sub="Pick up where you left off." />
 
+    <p v-if="showDeletedNote" class="deleted-note">
+      Account deleted. You're signed out.
+    </p>
+
     <form @submit.prevent="onSubmit">
       <Field
         v-model="email"
@@ -105,6 +118,15 @@ async function onSubmit() {
 </template>
 
 <style scoped>
+.deleted-note {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--paper-ink-muted);
+  margin: 0 0 16px;
+  text-align: center;
+}
+
 .forgot {
   text-align: right;
   margin: -4px 0 8px;

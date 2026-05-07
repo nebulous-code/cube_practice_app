@@ -290,6 +290,23 @@ export const useAuthStore = defineStore('auth', () => {
     resetUserScopedStores()
   }
 
+  /// Permanently delete the current user. The backend hard-deletes the
+  /// users row (cascading sessions/settings/progress) and writes an
+  /// account_deletions audit row. On success we mirror the client into
+  /// the post-delete state: anon, no caches, no guest blob. Throws on
+  /// 401 so the form can surface a wrong-password error inline.
+  async function deleteAccount(currentPassword: string): Promise<void> {
+    await api.delete('/auth/me', {
+      data: { current_password: currentPassword },
+    })
+    user.value = null
+    status.value = 'anon'
+    pendingMergePrompt.value = null
+    guestState.value = null
+    resetUserScopedStores()
+    clearGuestState()
+  }
+
   async function updateProfile(payload: {
     display_name?: string
     email?: string
@@ -351,6 +368,7 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     changePassword,
     signOutAll,
+    deleteAccount,
     updateProfile,
     completeOnboarding,
     refreshMe,

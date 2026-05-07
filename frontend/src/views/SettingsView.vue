@@ -113,6 +113,32 @@ const sooaPassword = ref('')
 const sooaSaving = ref(false)
 const sooaError = ref<string | null>(null)
 
+// ─── Delete account ──────────────────────────────────────────────────────────
+const showDelete = ref(false)
+const deletePassword = ref('')
+const deleteSaving = ref(false)
+const deleteError = ref<string | null>(null)
+
+async function onDeleteAccount() {
+  if (deletePassword.value.length === 0 || deleteSaving.value) return
+  deleteSaving.value = true
+  deleteError.value = null
+  try {
+    await auth.deleteAccount(deletePassword.value)
+    router.push('/login?deleted=1')
+  } catch (err) {
+    deleteError.value = err instanceof ApiError ? err.message : 'Try again.'
+  } finally {
+    deleteSaving.value = false
+  }
+}
+
+function cancelDelete() {
+  showDelete.value = false
+  deletePassword.value = ''
+  deleteError.value = null
+}
+
 async function onSignOut() {
   await auth.logout()
   router.push('/login')
@@ -280,6 +306,48 @@ function goBack() {
         </div>
       </div>
     </section>
+
+    <!-- Delete account — authed only. Two-step expand mirrors Sign-out-everywhere. -->
+    <section v-if="!auth.isGuest" class="card">
+      <p class="section-eyebrow">Delete account</p>
+      <p class="confirm-text danger-copy">
+        Permanently remove your account and all data — every review,
+        override, and session.
+      </p>
+
+      <button
+        v-if="!showDelete"
+        class="danger"
+        type="button"
+        @click="showDelete = true"
+      >
+        Delete account
+      </button>
+
+      <div v-else class="confirm-row danger-pane">
+        <p class="confirm-text">
+          <strong>This is forever.</strong> Your reviews, overrides, tags,
+          and progress are deleted on the spot. There is no recovery.
+        </p>
+        <PasswordField
+          v-model="deletePassword"
+          label="Current password"
+          autocomplete="current-password"
+        />
+        <p v-if="deleteError" class="error">{{ deleteError }}</p>
+        <div class="confirm-actions">
+          <button class="ghost" type="button" @click="cancelDelete">Cancel</button>
+          <button
+            class="danger"
+            type="button"
+            :disabled="deletePassword.length === 0 || deleteSaving"
+            @click="onDeleteAccount"
+          >
+            {{ deleteSaving ? 'Deleting…' : 'Delete forever' }}
+          </button>
+        </div>
+      </div>
+    </section>
   </main>
 </template>
 
@@ -402,6 +470,15 @@ h1 {
   padding: 12px;
   background: var(--paper-bg-alt);
   border-radius: 10px;
+}
+
+.danger-copy {
+  color: var(--paper-error);
+  margin: 0 0 12px;
+}
+
+.danger-pane {
+  border: 1px solid var(--paper-error);
 }
 
 .confirm-text {
