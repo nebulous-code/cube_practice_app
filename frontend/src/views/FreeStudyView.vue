@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { type Case, type CaseState, useCasesStore } from '@/stores/cases'
 import { useStudyStore } from '@/stores/study'
 
 const router = useRouter()
+const route = useRoute()
 const cases = useCasesStore()
 const study = useStudyStore()
 
@@ -30,13 +31,35 @@ const STATE_CHIPS: ReadonlyArray<{ key: CaseState; label: string }> = [
   { key: 'mastered', label: 'Mastered' },
 ]
 
+const ALL_STATE_KEYS: CaseState[] = ['not_started', 'learning', 'due', 'mastered']
+
 const tier1Mode = ref<SelectMode>('only')
 const tier1Filter = ref<Set<Tier1Shape>>(new Set())
 const tagMode = ref<SelectMode>('any-of')
 const tagFilter = ref<Set<string>>(new Set())
-const stateFilter = ref<Set<CaseState>>(
-  new Set<CaseState>(['not_started', 'learning', 'due', 'mastered']),
-)
+const stateMode = ref<SelectMode>('any-of')
+const stateFilter = ref<Set<CaseState>>(new Set<CaseState>(ALL_STATE_KEYS))
+
+// Hydrate filters from query string when arriving via the Free-study link
+// from CasesView (or PracticeView's standing chips). Empty / missing
+// params leave the defaults alone.
+{
+  const stateParam = route.query.state
+  if (typeof stateParam === 'string' && stateParam.length > 0) {
+    const tokens = stateParam.split(',').filter((t): t is CaseState =>
+      ALL_STATE_KEYS.includes(t as CaseState),
+    )
+    if (tokens.length > 0) stateFilter.value = new Set(tokens)
+  }
+  const tagsParam = route.query.tags
+  if (typeof tagsParam === 'string' && tagsParam.length > 0) {
+    tagFilter.value = new Set(tagsParam.split(',').filter((t) => t.length > 0))
+  }
+  const tier1Param = route.query.tier1
+  if (typeof tier1Param === 'string' && ['*', 'L', '-', '+'].includes(tier1Param)) {
+    tier1Filter.value = new Set([tier1Param as Tier1Shape])
+  }
+}
 
 // In "only" mode a click is exclusive (replaces the set); clicking the
 // already-selected chip clears it. In "any-of" mode a click toggles
@@ -77,10 +100,25 @@ function toggleTagMode() {
 }
 
 function toggleState(s: CaseState) {
+  // State has inverted semantics from Primary/Tags: the *full* set means
+  // "no filter" (all states allowed). In "only" mode, clicking the
+  // already-singleton chip restores the full set rather than emptying.
+  if (stateMode.value === 'only') {
+    if (stateFilter.value.size === 1 && stateFilter.value.has(s)) {
+      stateFilter.value = new Set(ALL_STATE_KEYS)
+    } else {
+      stateFilter.value = new Set([s])
+    }
+    return
+  }
   const next = new Set(stateFilter.value)
   if (next.has(s)) next.delete(s)
   else next.add(s)
   stateFilter.value = next
+}
+
+function toggleStateMode() {
+  stateMode.value = stateMode.value === 'only' ? 'any-of' : 'only'
 }
 
 const filtered = computed<Case[]>(() => {
@@ -175,7 +213,17 @@ function cancel() {
     </section>
 
     <section class="section">
-      <p class="section-label">State</p>
+      <p class="section-label">
+        State
+        <button
+          type="button"
+          class="hint mode-toggle"
+          :aria-label="`State filter mode: ${stateMode === 'only' ? 'only one at a time' : 'any of'} — tap to toggle`"
+          @click="toggleStateMode"
+        >
+          {{ stateMode === 'only' ? 'only' : 'any of' }}
+        </button>
+      </p>
       <div class="chips">
         <button
           v-for="chip in STATE_CHIPS"

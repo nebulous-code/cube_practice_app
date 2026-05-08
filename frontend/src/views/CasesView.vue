@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import CaseStatePip from '@/components/CaseStatePip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PatternDiagram from '@/components/PatternDiagram.vue'
-import { type Case, useCasesStore } from '@/stores/cases'
+import { type Case, type CaseState, useCasesStore } from '@/stores/cases'
 
 const router = useRouter()
+const route = useRoute()
 const cases = useCasesStore()
 
 onMounted(() => {
@@ -28,8 +29,17 @@ const TIER1_CHIPS: ReadonlyArray<{ key: Tier1Filter; label: string }> = [
   { key: '+', label: 'Cross' },
 ]
 
-// Multi-select tag filter — any-of semantics.
+const STATE_CHIPS: ReadonlyArray<{ key: CaseState; label: string }> = [
+  { key: 'not_started', label: 'New' },
+  { key: 'learning', label: 'Learning' },
+  { key: 'due', label: 'Due' },
+  { key: 'mastered', label: 'Mastered' },
+]
+
+// Multi-select tag and state filters — any-of semantics, matching the
+// free-study filter behavior. Empty set = no filter (show everything).
 const tagFilter = ref<Set<string>>(new Set())
+const stateFilter = ref<Set<CaseState>>(new Set())
 
 function toggleTag(tag: string) {
   const next = new Set(tagFilter.value)
@@ -37,6 +47,39 @@ function toggleTag(tag: string) {
   else next.add(tag)
   tagFilter.value = next
 }
+
+function toggleState(s: CaseState) {
+  const next = new Set(stateFilter.value)
+  if (next.has(s)) next.delete(s)
+  else next.add(s)
+  stateFilter.value = next
+}
+
+// Read filter state from the URL on mount — lets the practice screen's
+// standing chips deep-link into a filtered cases view (`?state=learning`)
+// and lets us round-trip filters through the case-detail page later.
+function applyQueryParams() {
+  const stateParam = route.query.state
+  if (typeof stateParam === 'string' && stateParam.length > 0) {
+    const tokens = stateParam.split(',').filter((t): t is CaseState =>
+      ['not_started', 'learning', 'due', 'mastered'].includes(t),
+    )
+    if (tokens.length > 0) stateFilter.value = new Set(tokens)
+  }
+  const tagsParam = route.query.tags
+  if (typeof tagsParam === 'string' && tagsParam.length > 0) {
+    tagFilter.value = new Set(tagsParam.split(',').filter((t) => t.length > 0))
+  }
+  const tier1Param = route.query.tier1
+  if (typeof tier1Param === 'string') {
+    if (TIER1_CHIPS.some((c) => c.key === tier1Param)) {
+      tier1Filter.value = tier1Param as Tier1Filter
+    }
+  }
+}
+
+applyQueryParams()
+watch(() => route.fullPath, applyQueryParams)
 
 function matchesSearch(c: Case, q: string): boolean {
   if (!q) return true
@@ -59,9 +102,20 @@ function matchesTags(c: Case): boolean {
   return c.tags.some((t) => tagFilter.value.has(t))
 }
 
+function matchesState(c: Case): boolean {
+  if (stateFilter.value.size === 0) return true
+  return stateFilter.value.has(c.state)
+}
+
 const filteredCases = computed(() =>
   cases.list
-    .filter((c) => matchesTier1(c) && matchesTags(c) && matchesSearch(c, search.value))
+    .filter(
+      (c) =>
+        matchesTier1(c) &&
+        matchesTags(c) &&
+        matchesState(c) &&
+        matchesSearch(c, search.value),
+    )
     .slice()
     .sort((a, b) => a.case_number - b.case_number),
 )
@@ -77,6 +131,17 @@ function clearFilters() {
   search.value = ''
   tier1Filter.value = 'all'
   tagFilter.value = new Set()
+  stateFilter.value = new Set()
+}
+
+function goFreeStudy() {
+  // Carry the current filter state through to /free-study so the user
+  // can drill into exactly what they're browsing without re-selecting.
+  const query: Record<string, string> = {}
+  if (tier1Filter.value !== 'all') query.tier1 = tier1Filter.value
+  if (tagFilter.value.size > 0) query.tags = [...tagFilter.value].join(',')
+  if (stateFilter.value.size > 0) query.state = [...stateFilter.value].join(',')
+  router.push({ path: '/free-study', query })
 }
 
 function pad2(n: number): string {
@@ -98,7 +163,7 @@ function pad2(n: number): string {
         <button
           type="button"
           class="free-study-btn"
-          @click="router.push('/free-study')"
+          @click="goFreeStudy"
         >
           Free study →
         </button>
@@ -139,6 +204,19 @@ function pad2(n: number): string {
         @click="toggleTag(tag)"
       >
         {{ tag }}
+      </button>
+    </div>
+
+    <div class="chips state-chips">
+      <button
+        v-for="chip in STATE_CHIPS"
+        :key="chip.key"
+        type="button"
+        class="chip"
+        :class="{ active: stateFilter.has(chip.key) }"
+        @click="toggleState(chip.key)"
+      >
+        {{ chip.label }}
       </button>
     </div>
 
@@ -332,6 +410,10 @@ function pad2(n: number): string {
 }
 
 .tag-chips {
+  padding-top: 8px;
+}
+
+.state-chips {
   padding-top: 8px;
 }
 

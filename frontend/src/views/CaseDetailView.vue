@@ -394,6 +394,16 @@ async function onStartStudying() {
         This case has personal overrides — clear all fields and save to revert to defaults.
       </p>
       <p v-if="formError" class="error">{{ formError }}</p>
+
+      <button
+        v-if="editing"
+        type="button"
+        class="cta primary save-bottom"
+        :disabled="saving"
+        @click="onSave"
+      >
+        {{ saving ? 'Saving…' : 'Save changes' }}
+      </button>
     </template>
   </main>
 </template>
@@ -503,6 +513,15 @@ async function onStartStudying() {
 
 .cta:hover {
   opacity: 0.92;
+}
+
+.cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.save-bottom {
+  margin-top: 16px;
 }
 
 .eyebrow {

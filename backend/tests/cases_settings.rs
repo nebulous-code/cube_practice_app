@@ -62,7 +62,7 @@ async fn null_clears_an_existing_override() {
     .await
     .unwrap();
 
-    assert_eq!(merged.nickname.as_deref(), Some("Tie Fighter"));
+    assert_eq!(merged.nickname, None);
     assert_eq!(merged.algorithm, "R U");
     assert!(merged.has_overrides);
 }
@@ -98,7 +98,7 @@ async fn clearing_all_fields_deletes_the_row() {
     .unwrap();
 
     assert!(!merged.has_overrides);
-    assert_eq!(merged.nickname.as_deref(), Some("Tie Fighter"));
+    assert_eq!(merged.nickname, None);
 
     let count: (i64,) = sqlx::query_as(
         "SELECT count(*)::bigint FROM user_case_settings WHERE user_id = $1 AND case_id = $2",
@@ -256,7 +256,7 @@ async fn updates_dont_leak_across_users() {
     .unwrap();
 
     let bobs = cases::get_for_user(&db.pool, bob, case).await.unwrap();
-    assert_eq!(bobs.nickname.as_deref(), Some("Tie Fighter"));
+    assert_eq!(bobs.nickname, None);
     assert!(!bobs.has_overrides);
 }
 

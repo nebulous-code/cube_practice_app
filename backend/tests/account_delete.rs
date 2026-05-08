@@ -198,6 +198,39 @@ async fn unknown_user_returns_unauthorized() {
 }
 
 #[tokio::test]
+async fn re_register_after_delete_starts_with_fresh_streak() {
+    let db = TestDb::new().await;
+    let first = seed_user(&db.pool, "alice@example.com", "pw1").await;
+
+    // Simulate a few days of practice on the first account.
+    sqlx::query(
+        "UPDATE users SET streak_count = 2, last_practice_date = CURRENT_DATE WHERE id = $1",
+    )
+    .bind(first)
+    .execute(&db.pool)
+    .await
+    .expect("seed streak");
+
+    account_delete::delete_account(&db.pool, first, "pw1")
+        .await
+        .expect("delete");
+
+    // Re-register the same email — should be a fresh row with default streak.
+    let second = seed_user(&db.pool, "alice@example.com", "pw2").await;
+    let row: (i32, Option<chrono::NaiveDate>) = sqlx::query_as(
+        "SELECT streak_count, last_practice_date FROM users WHERE id = $1",
+    )
+    .bind(second)
+    .fetch_one(&db.pool)
+    .await
+    .expect("read fresh user");
+
+    assert_eq!(row.0, 0, "fresh user should start with streak_count=0");
+    assert!(row.1.is_none(), "fresh user should start with last_practice_date=NULL");
+    assert_ne!(first, second, "re-register should produce a new user id");
+}
+
+#[tokio::test]
 async fn re_register_then_delete_creates_separate_audit_rows() {
     let db = TestDb::new().await;
     let first = seed_user(&db.pool, "alice@example.com", "pw1").await;

@@ -114,7 +114,8 @@ function startSession() {
       {{ study.error }}
     </p>
 
-    <!-- Standing — SM-2 state distribution + count chips -->
+    <!-- Standing — SM-2 state distribution + count chips. Each chip
+         deep-links into the cases page filtered to that state. -->
     <section v-if="standingTotal > 0" class="standing-card">
       <p class="standing-eyebrow">Standing</p>
       <div class="standing-bar">
@@ -127,15 +128,18 @@ function startSession() {
         />
       </div>
       <div class="standing-chips">
-        <div
+        <button
           v-for="seg in standingSegments"
           :key="seg.key"
+          type="button"
           class="standing-chip"
           :class="seg.className"
+          :aria-label="`Show ${seg.label.toLowerCase()} cases`"
+          @click="router.push({ path: '/cases', query: { state: seg.key } })"
         >
           <span class="standing-count">{{ seg.count }}</span>
           <span class="standing-label">{{ seg.label }}</span>
-        </div>
+        </button>
       </div>
     </section>
 
@@ -385,6 +389,13 @@ function startSession() {
   padding: 6px 4px;
   border-radius: 8px;
   background: var(--paper-bg);
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.standing-chip:hover {
+  background: var(--paper-card);
 }
 
 .standing-count {

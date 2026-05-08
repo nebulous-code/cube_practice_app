@@ -42,6 +42,22 @@ async fn one_puzzle_type_one_stage() {
 }
 
 #[tokio::test]
+async fn case_34_result_rotation_is_90_cw() {
+    // Migration 0008 fixed this — Case 34 (Upstairs) lands on Case 35 with a
+    // 90° CW rotation (rotation enum: 0=none, 1=CW, 2=180, 3=CCW).
+    let db = TestDb::new().await;
+
+    let row: (i32,) = sqlx::query_as(
+        "SELECT result_rotation FROM cases WHERE case_number = 34",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .expect("read case 34 rotation");
+
+    assert_eq!(row.0, 1, "Case 34 result_rotation should be 1 (90° CW)");
+}
+
+#[tokio::test]
 async fn every_case_has_a_valid_result_case() {
     let db = TestDb::new().await;
 

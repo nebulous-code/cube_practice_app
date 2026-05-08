@@ -67,7 +67,8 @@ async fn null_override_falls_through_to_default() {
     let case_id = case_id_by_number(&db.pool, 1).await;
 
     // Insert an override row that touches algorithm only — nickname stays NULL
-    // and should fall through to the global "Tie Fighter".
+    // both globally (0009 cleared globals) and on the override, so the merge
+    // resolves to None.
     sqlx::query(
         "INSERT INTO user_case_settings (user_id, case_id, algorithm) VALUES ($1, $2, 'CUSTOM')",
     )
@@ -80,7 +81,7 @@ async fn null_override_falls_through_to_default() {
     let case = cases::get_for_user(&db.pool, user_id, case_id)
         .await
         .expect("get");
-    assert_eq!(case.nickname.as_deref(), Some("Tie Fighter"));
+    assert_eq!(case.nickname, None);
     assert_eq!(case.algorithm, "CUSTOM");
     assert!(case.has_overrides);
 }
@@ -131,7 +132,7 @@ async fn other_users_overrides_dont_leak() {
     let bobs_case = cases::get_for_user(&db.pool, bob, case_id)
         .await
         .expect("get");
-    assert_eq!(bobs_case.nickname.as_deref(), Some("Tie Fighter"));
+    assert_eq!(bobs_case.nickname, None);
     assert!(!bobs_case.has_overrides);
 
     let alices_case = cases::get_for_user(&db.pool, alice, case_id)

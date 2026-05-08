@@ -160,7 +160,7 @@ if (study.queue.length === 0 && study.status !== 'complete') {
       </div>
 
       <div class="diagram">
-        <PatternDiagram :pattern="current.pattern" :size="240" />
+        <PatternDiagram :pattern="current.pattern" :size="revealed ? 120 : 240" />
       </div>
 
       <template v-if="!revealed">
