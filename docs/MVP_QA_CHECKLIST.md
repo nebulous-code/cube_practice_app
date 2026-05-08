@@ -240,6 +240,12 @@ laptop + an iPhone or Android works). Anything that fails goes in
 - [ ] `/does-not-exist` while signed in → renders `<NotFoundView>` with "Back to practice" CTA
 - [ ] Same path while signed out → CTA reads "Back to login"
 
+### Splash
+- [ ] Splash screen shows logo + "Cube Practice" wordmark + "a quiet place to drill" tagline on initial load
+- [ ] Logo rotates with overshoot animation (or stays still under `prefers-reduced-motion`)
+- [ ] Cold-start message ("warming up the server — first visits take a moment") fades in after ~5s on a cold backend
+- [ ] On a warm backend the splash unmounts before the cold-start message ever appears
+
 ### Mobile
 - [ ] iOS Safari (latest) — every page scrolls cleanly, no horizontal overflow, tab bar doesn't cover bottom content
 - [ ] Android Chrome (latest) — same
@@ -278,4 +284,3 @@ These aren't really QA — they're the content tasks that block public launch. L
 - [ ] OLL case numbering universality verified (1–57 matches the cubing-community convention)
 - [ ] Onboarding screen final copy + design landed
 - [ ] Landing page final copy landed
-- [ ] Splash screen final treatment confirmed

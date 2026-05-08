@@ -29,5 +29,19 @@ import StaticPageView from './StaticPageView.vue'
       Typography uses Newsreader, Inter Tight, and JetBrains Mono via Google
       Fonts.
     </p>
+
+    <h2>Support the project</h2>
+    <p>
+      Cube Practice is a solo side project. If it's useful to you, drop a
+      star on
+      <a
+        href="https://github.com/nebulous-code/cube_practice_app"
+        target="_blank"
+        rel="noopener noreferrer"
+        >github.com/nebulous-code/cube_practice_app</a
+      >
+      — it's the easiest free way to say thanks and helps other cubers
+      find the app.
+    </p>
   </StaticPageView>
 </template>

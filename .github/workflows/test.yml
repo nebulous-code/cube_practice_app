@@ -1,0 +1,82 @@
+# Runs the full test suite on every push and pull request. Mirrors what
+# `tools/test.sh --enforce` does locally. The 90% backend coverage gate
+# and the frontend type-check + tests are the two ways CI can fail.
+#
+# This workflow is *report-only* — it does not block merges via branch
+# protection. A failing run sends GitHub's standard email so we know to
+# write more tests; nothing prevents pushing or merging while it's red.
+
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
+      # Same exclusions + 90% gate as `tools/test.sh --enforce`. See the
+      # comment block in that script for why each module is excluded.
+      - name: Coverage
+        working-directory: backend
+        run: |
+          cargo llvm-cov \
+            --summary-only \
+            --fail-under-lines 90 \
+            --ignore-filename-regex '(src/main\.rs|src/lib\.rs|src/db\.rs|src/config\.rs|src/state\.rs|src/error\.rs|src/auth/cookie\.rs|src/auth/extractor\.rs|src/auth/recaptcha\.rs|src/auth/session\.rs|src/email/resend\.rs|src/routes/)'
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx vue-tsc --noEmit
+
+      - name: Tests
+        working-directory: frontend
+        run: npx vitest run
