@@ -236,3 +236,20 @@ Backend + frontend pairs.
 6. **Guest "Discard guest data" entry in Settings.** **Deferred.** Tracked as Post-MVP in `Cube_Practice_Design_Doc.md` §1 — trivially `clearGuestState()`, but the UX deserves its own thinking and is unrelated to account deletion.
 
 7. **Rate-limit window.** **3 attempts per hour per user.** Same shape as `forgot-password`'s per-email window. Stops cookie-stealing brute-force, doesn't get in the way of legitimate users who fat-finger their password once.
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

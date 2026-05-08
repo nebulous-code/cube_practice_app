@@ -351,3 +351,20 @@ Looks good
 
 D. **Onboarding for guests.** **Proposed: same `OnboardingView`. Triggered once on first guest-mode entry. Final step writes `onboarding_completed: true` to the blob (no backend roundtrip — there is no backend for this user yet).** When a guest later upgrades, the import path sets `users.has_seen_onboarding = TRUE` from the blob, so re-verification on a new device skips onboarding.
 sounds good
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

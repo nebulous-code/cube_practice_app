@@ -410,3 +410,20 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - If we decide later to flip rate-limiter implementation to Redis-backed, the in-process version (B9) stays as a fallback / dev-mode default.
 - §10 is the first source of truth for what "M1 closed" means. If the user disagrees with anything there, it's the easiest place to amend.
  
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

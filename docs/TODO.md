@@ -14,6 +14,7 @@ Things that need a human decision, content, design, or external action — items
 
 - [ ] **Onboarding screen real copy + design.** `OnboardingView.vue` ships placeholder copy for the two-step screen ("Practice OLL with intention" / "Weakest cases come first"). Designer was going to take a pass once the product was further along.
 - [ ] **Landing page copy.** `LandingView.vue` ships placeholder marketing copy (hero, feature bullets, how-it-works steps, CTAs). Replace before public launch.
+- [ ] **README.md** Need to add a readme so that people that land on the github page can get a sense of the project
 
 ## Optional for MVP
 

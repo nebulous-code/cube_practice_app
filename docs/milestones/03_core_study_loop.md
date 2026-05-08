@@ -366,3 +366,20 @@ Pairs backend + frontend per the user's principle (avoid landing endpoints with 
 - **Visible streak when 0.** Display "0" or a subtle "Start a streak" prompt? *Default: show the count, even when 0.*
 > Response: Show 0
 
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

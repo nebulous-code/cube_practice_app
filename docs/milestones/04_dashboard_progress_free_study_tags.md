@@ -317,3 +317,20 @@ Pairs backend + frontend per the user's principle (avoid landing endpoints with 
 
 - **Progress tab: list inside vs scoped page.** The Cases tab and Progress tab will both end up showing every case, just sorted/filtered differently. Default: keep them separate — Cases is browse + edit (no state filter), Progress is "what's my training look like" (state-first). *Confirm — alternative is to fold state filtering into Cases and drop the Progress tab to a stats-only page.*
 > Response: that's fine to show both twise, it's different sort which is helpful.
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

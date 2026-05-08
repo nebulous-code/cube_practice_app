@@ -311,3 +311,20 @@ Resolved during planning — kept here as a record of the decisions:
 7. **Accessibility scope for M5.** Keyboard nav + visible focus rings + form labels + spot-check contrast. Screen-reader walkthrough and full WCAG audit are post-MVP — added to `docs/Cube_Practice_Design_Doc.md` §1 Post-MVP.
 
 8. **Landing page / homepage at `/`.** Originally tagged as a post-MVP item; pulled into M5 since this is the static-page milestone. Authed dashboard relocates to `/practice`. Additional marketing pages (features, pricing, FAQ, etc.) remain post-MVP — added to `docs/Cube_Practice_Design_Doc.md` §1 Post-MVP.
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

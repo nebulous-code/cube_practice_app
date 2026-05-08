@@ -360,3 +360,20 @@ Pairs backend + frontend per the user's principle: avoid landing endpoints with 
 - **Test DB harness.** *Resolved.* Land in B0 as the first M2 backend ticket. All B1+ tests use it; future milestones inherit it.
 - **`has_overrides` on the Cases list.** *Resolved.* Computed inline in the merge query as `(s.id IS NOT NULL)` (or equivalent COALESCE/IS NOT NULL on the join), so no per-case extra row read.
 - **PatternDiagram dark tone.** *Resolved (drop it).* Verified in the prototype: `tone='dark'` is a dead branch — no caller ever passes it. The Vue port omits the prop and ships a single paper palette. Real dark mode is post-MVP and would touch every component.
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

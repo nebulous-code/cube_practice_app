@@ -172,3 +172,20 @@ These need decisions before guest-mode implementation begins (last MVP step), bu
 5. **localStorage size.** A guest with all 57 cases + dense overrides + many tags could approach 50–100 KB. Browsers allow ~5 MB; not a concern. Worth measuring once the renderer is in.
 6. **Version migration policy.** When `version` jumps from 1 to 2, who runs the migration — frontend on load, or backend on merge? Default proposal: frontend on load, since the data is local. Backend rejects unknown versions.
 7. **Sign-in over guest.** When a returning user signs in with an existing account on a device with guest data, the merge banner (§6) is the answer. But what about a guest who *has* an account on another device — should we surface "Sign in to sync" earlier in the flow? Default proposal: no, the existing footer link on the splash/login is enough.
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

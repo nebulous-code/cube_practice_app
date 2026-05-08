@@ -549,3 +549,23 @@ GitHub Actions for both services:
 21. Static pages — `/about`, `/terms`, `/privacy`, `/acknowledgements` (placeholder content fine until launch)
 22. Guest mode — final MVP feature, per `docs/guest_mode_design_doc.md`
 23. Deployment — Render setup, environment variables, CI/CD
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the project shipped its initial MVP. This
+is the **first** doc I wrote — the spec before any code existed. Re-reading
+it now, fill in what reality taught:
+
+- **What this spec got right:**
+
+- **What this spec got wrong (or missed entirely):**
+
+- **Choices that were obvious in hindsight but felt risky at the time:**
+
+- **Things I overspec'd that didn't matter:**
+
+- **Things I underspec'd that bit me later:**
+
+- **If I were writing this spec from scratch today, the biggest structural change would be:**
