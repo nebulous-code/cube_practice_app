@@ -457,3 +457,215 @@ async fn merge_empty_blob_is_a_noop() {
         .unwrap();
     assert_eq!(row.0, 7, "empty blob must not regress streak");
 }
+
+// ─── Defense-in-depth — merge() called without validate() first ─────────────
+//
+// Mirrors the equivalent guard tests in guest_state_import.rs. validate() is
+// the contract gate, but `merge` is `pub`; these pin down the structured
+// errors that surface when callers feed it malformed/inconsistent input.
+
+fn empty_settings() -> GuestSettings {
+    GuestSettings {
+        nickname: None,
+        algorithm: None,
+        result_case_number: None,
+        result_rotation: None,
+        tags: vec![],
+    }
+}
+
+#[tokio::test]
+async fn merge_rejects_non_numeric_settings_key() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    let mut state = empty_state();
+    state.settings.insert("not-a-number".into(), empty_settings());
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.settings"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn merge_rejects_non_numeric_progress_key() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    let mut state = empty_state();
+    state.progress.insert(
+        "not-a-number".into(),
+        GuestProgress {
+            ease_factor: 2.5,
+            interval_days: 1,
+            repetitions: 0,
+            due_date: NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            last_grade: None,
+            last_reviewed: None,
+        },
+    );
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.progress"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+async fn delete_case(pool: &PgPool, case_number: i32) {
+    sqlx::query("UPDATE cases SET result_case_id = NULL")
+        .execute(pool)
+        .await
+        .expect("null result_case_ids");
+    sqlx::query("DELETE FROM cases WHERE case_number = $1")
+        .bind(case_number)
+        .execute(pool)
+        .await
+        .expect("delete case");
+}
+
+#[tokio::test]
+async fn merge_rejects_settings_pointing_at_missing_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 5).await;
+
+    let mut state = empty_state();
+    state.settings.insert(
+        "5".into(),
+        GuestSettings {
+            nickname: Some("Mine".into()),
+            ..empty_settings()
+        },
+    );
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.settings"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn merge_rejects_settings_with_missing_result_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 30).await;
+
+    let mut state = empty_state();
+    state.settings.insert(
+        "1".into(),
+        GuestSettings {
+            result_case_number: Some(30),
+            ..empty_settings()
+        },
+    );
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(
+                fields.contains_key("guest_state.settings.result_case_number"),
+                "{fields:?}",
+            );
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn merge_skips_settings_rows_with_no_real_overrides() {
+    // Mirror of import's empty-override skip path. A guest blob may carry
+    // entries for cases the user only browsed without overriding; merge
+    // should drop those and not insert empty rows.
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    let mut state = empty_state();
+    state.settings.insert("1".into(), empty_settings());
+    state
+        .settings
+        .insert("2".into(), empty_settings()); // also empty
+
+    let summary = merge(&db.pool, user, &state).await.unwrap();
+    assert_eq!(summary.cases, 0, "no real overrides should land");
+
+    let count: (i64,) = sqlx::query_as(
+        "SELECT count(*)::bigint FROM user_case_settings WHERE user_id = $1",
+    )
+    .bind(user)
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
+    assert_eq!(count.0, 0);
+}
+
+#[tokio::test]
+async fn merge_rejects_when_union_exceeds_link_cap() {
+    // Trips the total_links cap (per-tag-link ceiling) without exceeding
+    // the distinct cap. The existing `merge_rejects_when_union_exceeds_tag_cap`
+    // test trips the distinct cap; this covers the link-cap branch.
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    // 50 cases × 21 tags each = 1050 links — over the 1000 link cap.
+    // Tags repeat across cases so distinct stays well under the 100 cap.
+    let mut state = empty_state();
+    for n in 1..=50i32 {
+        let tags: Vec<String> = (0..21).map(|i| format!("p{i}")).collect();
+        state.settings.insert(
+            n.to_string(),
+            GuestSettings {
+                tags,
+                ..empty_settings()
+            },
+        );
+    }
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(
+                fields.contains_key("guest_state.settings.tags"),
+                "{fields:?}",
+            );
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn merge_rejects_progress_pointing_at_missing_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 5).await;
+
+    let mut state = empty_state();
+    state.progress.insert(
+        "5".into(),
+        GuestProgress {
+            ease_factor: 2.5,
+            interval_days: 3,
+            repetitions: 2,
+            due_date: NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            last_grade: Some(2),
+            last_reviewed: None,
+        },
+    );
+
+    let err = merge(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.progress"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}

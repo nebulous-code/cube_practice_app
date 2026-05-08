@@ -340,3 +340,160 @@ async fn validate_catches_bad_blob_before_db_touched() {
 
     state.validate().expect_err("bad version rejects");
 }
+
+// ─── Defense-in-depth — import() called without validate() first ─────────────
+//
+// validate() is the contract gate, but `import` is `pub` and a future caller
+// could forget. These tests pin down the structured errors `import` returns
+// when fed malformed/inconsistent input, so the registration handler always
+// surfaces a 400 with the right field instead of leaking a 500.
+
+fn empty_settings() -> GuestSettings {
+    GuestSettings {
+        nickname: None,
+        algorithm: None,
+        result_case_number: None,
+        result_rotation: None,
+        tags: vec![],
+    }
+}
+
+#[tokio::test]
+async fn import_rejects_non_numeric_settings_key() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    let mut state = empty_state();
+    state.settings.insert("not-a-number".into(), empty_settings());
+
+    let err = import(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.settings"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn import_rejects_non_numeric_progress_key() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+
+    let mut state = empty_state();
+    state.progress.insert(
+        "not-a-number".into(),
+        GuestProgress {
+            ease_factor: 2.5,
+            interval_days: 1,
+            repetitions: 0,
+            due_date: NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            last_grade: None,
+            last_reviewed: None,
+        },
+    );
+
+    let err = import(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.progress"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+/// Drop the FK-back-references from cases.result_case_id and remove a single
+/// case row. Lets us simulate a degraded DB state where a guest blob keyed
+/// to a valid case_number maps to nothing in `cases`.
+async fn delete_case(pool: &PgPool, case_number: i32) {
+    sqlx::query("UPDATE cases SET result_case_id = NULL")
+        .execute(pool)
+        .await
+        .expect("null result_case_ids");
+    sqlx::query("DELETE FROM cases WHERE case_number = $1")
+        .bind(case_number)
+        .execute(pool)
+        .await
+        .expect("delete case");
+}
+
+#[tokio::test]
+async fn import_rejects_settings_pointing_at_missing_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 5).await;
+
+    let mut state = empty_state();
+    state.settings.insert(
+        "5".into(),
+        GuestSettings {
+            nickname: Some("Mine".into()),
+            ..empty_settings()
+        },
+    );
+
+    let err = import(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.settings"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn import_rejects_settings_with_missing_result_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 30).await;
+
+    // Settings on case 1, but it points at a deleted case 30 as its
+    // result. Hits the result_case_number lookup branch.
+    let mut state = empty_state();
+    state.settings.insert(
+        "1".into(),
+        GuestSettings {
+            result_case_number: Some(30),
+            ..empty_settings()
+        },
+    );
+
+    let err = import(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(
+                fields.contains_key("guest_state.settings.result_case_number"),
+                "{fields:?}",
+            );
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn import_rejects_progress_pointing_at_missing_case() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    delete_case(&db.pool, 5).await;
+
+    let mut state = empty_state();
+    state.progress.insert(
+        "5".into(),
+        GuestProgress {
+            ease_factor: 2.5,
+            interval_days: 3,
+            repetitions: 2,
+            due_date: NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            last_grade: Some(2),
+            last_reviewed: None,
+        },
+    );
+
+    let err = import(&db.pool, user, &state).await.expect_err("rejects");
+    match err {
+        AppError::Validation(fields) => {
+            assert!(fields.contains_key("guest_state.progress"), "{fields:?}");
+        }
+        other => panic!("expected Validation, got {other:?}"),
+    }
+}

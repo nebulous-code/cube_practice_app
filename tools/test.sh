@@ -32,7 +32,7 @@ set -euo pipefail
 #   routes/*                   — HTTP handlers; we test the lib functions they delegate to
 COVERAGE_EXCLUDE='(src/main\.rs|src/lib\.rs|src/db\.rs|src/config\.rs|src/state\.rs|src/error\.rs|src/auth/cookie\.rs|src/auth/extractor\.rs|src/auth/recaptcha\.rs|src/auth/session\.rs|src/email/resend\.rs|src/routes/)'
 
-COVERAGE_MIN=90
+COVERAGE_MIN=95
 
 run_backend=true
 run_frontend=true

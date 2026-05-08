@@ -718,4 +718,153 @@ mod tests {
         );
         s.validate().expect_err("over-cap tag rejects");
     }
+
+    fn empty_settings() -> GuestSettings {
+        GuestSettings {
+            nickname: None,
+            algorithm: None,
+            result_case_number: None,
+            result_rotation: None,
+            tags: vec![],
+        }
+    }
+
+    fn baseline_progress() -> GuestProgress {
+        GuestProgress {
+            ease_factor: 2.5,
+            interval_days: 1,
+            repetitions: 0,
+            due_date: NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            last_grade: None,
+            last_reviewed: None,
+        }
+    }
+
+    fn assert_field_rejected(state: &GuestState, expected_field: &str) {
+        let err = state.validate().expect_err("validate should reject");
+        match err {
+            AppError::Validation(fields) => {
+                assert!(
+                    fields.contains_key(expected_field),
+                    "expected field '{expected_field}' in validation error; got {fields:?}",
+                );
+            }
+            other => panic!("expected Validation, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_rejects_non_numeric_settings_key() {
+        let mut s = empty_state();
+        s.settings.insert("abc".into(), empty_settings());
+        assert_field_rejected(&s, "guest_state.settings.abc");
+    }
+
+    #[test]
+    fn validate_rejects_non_numeric_progress_key() {
+        let mut s = empty_state();
+        s.progress.insert("abc".into(), baseline_progress());
+        assert_field_rejected(&s, "guest_state.progress.abc");
+    }
+
+    #[test]
+    fn validate_rejects_out_of_range_progress_key() {
+        // parse_case_key returns the "out of range" message, which lands on
+        // a different field path than non-numeric (.{key} vs .{n}).
+        let mut s = empty_state();
+        s.progress.insert("0".into(), baseline_progress());
+        assert_field_rejected(&s, "guest_state.progress.0");
+    }
+
+    #[test]
+    fn validate_rejects_result_case_number_below_range() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.result_case_number = Some(0);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.result_case_number");
+    }
+
+    #[test]
+    fn validate_rejects_result_case_number_above_range() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.result_case_number = Some(58);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.result_case_number");
+    }
+
+    #[test]
+    fn validate_rejects_negative_result_rotation() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.result_rotation = Some(-1);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.result_rotation");
+    }
+
+    #[test]
+    fn validate_rejects_too_large_result_rotation() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.result_rotation = Some(4);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.result_rotation");
+    }
+
+    #[test]
+    fn validate_rejects_negative_repetitions() {
+        let mut s = empty_state();
+        let mut p = baseline_progress();
+        p.repetitions = -1;
+        s.progress.insert("1".into(), p);
+        assert_field_rejected(&s, "guest_state.progress.1.repetitions");
+    }
+
+    #[test]
+    fn validate_rejects_negative_last_grade() {
+        let mut s = empty_state();
+        let mut p = baseline_progress();
+        p.last_grade = Some(-1);
+        s.progress.insert("1".into(), p);
+        assert_field_rejected(&s, "guest_state.progress.1.last_grade");
+    }
+
+    #[test]
+    fn validate_rejects_too_large_last_grade() {
+        let mut s = empty_state();
+        let mut p = baseline_progress();
+        p.last_grade = Some(4);
+        s.progress.insert("1".into(), p);
+        assert_field_rejected(&s, "guest_state.progress.1.last_grade");
+    }
+
+    #[test]
+    fn validate_rejects_too_large_ease_factor() {
+        // Lower bound already covered; this catches the upper-bound branch.
+        let mut s = empty_state();
+        let mut p = baseline_progress();
+        p.ease_factor = 5.5;
+        s.progress.insert("1".into(), p);
+        assert_field_rejected(&s, "guest_state.progress.1.ease_factor");
+    }
+
+    #[test]
+    fn validate_collects_multiple_errors() {
+        // The validator should accumulate all problems before returning.
+        let mut s = empty_state();
+        s.streak_count = -1;
+        let mut g = empty_settings();
+        g.result_rotation = Some(99);
+        s.settings.insert("1".into(), g);
+
+        let err = s.validate().expect_err("multi-failure rejects");
+        match err {
+            AppError::Validation(fields) => {
+                assert!(fields.contains_key("guest_state.streak_count"));
+                assert!(fields.contains_key("guest_state.settings.1.result_rotation"));
+            }
+            other => panic!("expected Validation, got {other:?}"),
+        }
+    }
 }

@@ -322,6 +322,78 @@ async fn tags_some_none_clears_to_global() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// ─── result_case_id / result_rotation positive paths ────────────────────────
+//
+// The existing tests for these fields exercise the validation rejections only
+// (cross-stage, unknown UUID). These pin down the happy-path through
+// `apply_copy` — successful patch and clear via `Some(Some(...))` /
+// `Some(None)` so the i32 / Uuid override-merge is covered.
+
+#[tokio::test]
+async fn result_case_id_and_rotation_override_lands() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+    let target = case_id_by_number(&db.pool, 7).await;
+
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            result_case_id: Some(Some(target)),
+            result_rotation: Some(Some(2)),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("update");
+
+    assert_eq!(merged.result_case_id, Some(target));
+    assert_eq!(merged.result_case_number, Some(7));
+    assert_eq!(merged.result_rotation, 2);
+    assert!(merged.has_overrides);
+}
+
+#[tokio::test]
+async fn result_rotation_some_none_clears_to_global() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    // First override result_rotation to a non-default value.
+    cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            nickname: Some(Some("keep me".into())),
+            result_rotation: Some(Some(3)),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // Then clear result_rotation only via Some(None) — covers the
+    // `Some(None) => None` arm of `apply_copy`.
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            result_rotation: Some(None),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // Falls back to the global default for case 1, which is 2 (rotation 180°).
+    assert_eq!(merged.result_rotation, 2);
+    assert_eq!(merged.nickname.as_deref(), Some("keep me"));
+}
+
 async fn seed_user(pool: &sqlx::PgPool, email: &str) -> Uuid {
     let row: (Uuid,) = sqlx::query_as(
         "INSERT INTO users (email, display_name, password_hash, email_verified) \
