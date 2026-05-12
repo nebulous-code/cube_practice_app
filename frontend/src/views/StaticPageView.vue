@@ -90,8 +90,32 @@ h1 {
   margin: 32px 0 12px;
 }
 
+.prose :deep(h3) {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: var(--paper-ink);
+  margin: 22px 0 10px;
+}
+
 .prose :deep(p) {
   margin: 0 0 14px;
+}
+
+.prose :deep(strong) {
+  color: var(--paper-ink);
+  font-weight: 600;
+}
+
+.prose :deep(code) {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--paper-rule-faint);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  color: var(--paper-ink);
 }
 
 .prose :deep(a) {
@@ -106,6 +130,57 @@ h1 {
 
 .prose :deep(li) {
   margin: 0 0 6px;
+}
+
+.prose :deep(.doc-meta) {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--paper-ink-faint);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.prose :deep(.doc-meta strong) {
+  color: var(--paper-ink-faint);
+  font-weight: 600;
+}
+
+.prose :deep(.table-wrap) {
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+
+.prose :deep(table) {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 480px;
+}
+
+.prose :deep(thead th) {
+  text-align: left;
+  font-weight: 600;
+  color: var(--paper-ink);
+  border-bottom: 1px solid var(--paper-rule);
+  padding: 8px 12px 8px 0;
+}
+
+.prose :deep(tbody td) {
+  vertical-align: top;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--paper-rule-faint);
+  color: var(--paper-ink-muted);
+}
+
+.prose :deep(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.prose :deep(th:last-child),
+.prose :deep(td:last-child) {
+  padding-right: 0;
 }
 
 .prose :deep(.placeholder) {
