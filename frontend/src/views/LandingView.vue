@@ -2,11 +2,6 @@
 // Public landing page at `/`. Authed (and guest-mode) visitors are
 // redirected to /practice by the router guard, so this view only renders
 // for fully-anon visitors.
-//
-// Copy is placeholder — see docs/TODO.md "Landing page copy" for the swap
-// point. Layout follows docs/milestones/05_polish_and_static_pages.md §5.
-// M6 swapped the primary hero CTA from "Sign in" to "Continue as guest"
-// per the user's clarification on guest_mode_design_doc Q-B.
 
 import { RouterLink, useRouter } from 'vue-router'
 
@@ -35,10 +30,11 @@ function startAsGuest() {
           <LogoMark :size="72" />
         </div>
         <h1 class="title">Quiet Cube</h1>
-        <p class="tag">a quiet place to drill</p>
+        <p class="tag">OLL practice, without the noise.</p>
         <p class="lede">
-          Spaced repetition for Rubik's cube algorithms. Build muscle memory for
-          the cases you don't yet know, and keep the ones you do sharp.
+          For cubers learning OLL. Build muscle memory for the cases you don't
+          yet know, and keep the ones you do sharp — without grinding the
+          algorithms you've already locked in.
         </p>
         <div class="cta-row">
           <button type="button" class="cta primary" @click="startAsGuest">
@@ -52,9 +48,9 @@ function startAsGuest() {
         <h2 class="section-title">What you get</h2>
         <ul>
           <li>All 57 OLL cases ready out of the box</li>
-          <li>Anki-style SM-2 schedules each case for you</li>
+          <li>Weak cases come back. Strong cases rest.</li>
           <li>Free study any case, any time</li>
-          <li>Track your streak and what's due today</li>
+          <li>A streak, a daily queue, and nothing else demanding your attention</li>
         </ul>
       </section>
 
@@ -62,13 +58,9 @@ function startAsGuest() {
         <h2 class="section-title">How it works</h2>
         <ol>
           <li>Pick a case to drill, or let the schedule pick for you.</li>
-          <li>See the pattern, recall the algorithm, then grade yourself.</li>
-          <li>The schedule decides when each case comes back around.</li>
+          <li>Execute the algorithm on a solved cube, flip the card, and check the result.</li>
+          <li>Grade yourself Fail / Hard / Good / Easy. The schedule does the rest.</li>
         </ol>
-      </section>
-
-      <section class="closing">
-        <RouterLink to="/login" class="cta primary">Sign in →</RouterLink>
       </section>
     </main>
 
@@ -250,11 +242,6 @@ button.cta {
 
 .features li::marker {
   color: var(--paper-ink-faint);
-}
-
-.closing {
-  text-align: center;
-  padding: var(--space-6) 0;
 }
 
 .footer {
