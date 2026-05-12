@@ -59,11 +59,8 @@ async fn force_tags(
 
 fn patch_tags(tags: Vec<String>) -> SettingsPatch {
     SettingsPatch {
-        nickname: None,
-        algorithm: None,
-        result_case_id: None,
-        result_rotation: None,
         tags: Some(Some(tags)),
+        ..Default::default()
     }
 }
 

@@ -65,6 +65,14 @@ const resultPattern = computed(() => {
   return rotatePattern(resultCase.value.pattern, current.value.result_rotation)
 })
 
+// Source pattern is shown with the user's display_rotation applied so the
+// card looks consistent with how it appears in the cases browser and the
+// case detail view. result_rotation is unrelated and stays on the result.
+const sourcePattern = computed(() => {
+  if (!current.value) return ''
+  return rotatePattern(current.value.pattern, current.value.display_rotation)
+})
+
 function rotationLabel(rot: number): string {
   return ROTATION_LABELS[((rot % 4) + 4) % 4] ?? ''
 }
@@ -160,7 +168,7 @@ if (study.queue.length === 0 && study.status !== 'complete') {
       </div>
 
       <div class="diagram">
-        <PatternDiagram :pattern="current.pattern" :size="revealed ? 120 : 240" />
+        <PatternDiagram :pattern="sourcePattern" :size="revealed ? 120 : 240" />
       </div>
 
       <template v-if="!revealed">

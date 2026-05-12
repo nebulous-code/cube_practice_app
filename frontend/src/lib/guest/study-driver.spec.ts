@@ -93,6 +93,7 @@ describe('dueQueueFromCases', () => {
       result_case_id: null,
       result_case_number: null,
       result_rotation: 0,
+      display_rotation: 0,
       pattern: 'XXXXXXXXX',
       tier1_tag: '+',
       tags: [],

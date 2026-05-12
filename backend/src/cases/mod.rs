@@ -26,6 +26,12 @@ pub struct Case {
     pub result_case_id: Option<Uuid>,
     pub result_case_number: Option<i32>,
     pub result_rotation: i32,
+    /// Orientation the user wants this case shown in (0..3 = 0°/90° CW/180°/
+    /// 90° CCW). Applied wherever the case is the primary subject — cases
+    /// browser tile, study-session source pattern, case detail top preview.
+    /// Independent of `result_rotation`: the post-algorithm result preview
+    /// keeps its existing rotation and is not composed with this value.
+    pub display_rotation: i32,
     pub pattern: String,
     pub tier1_tag: String,
     /// Multi-valued tags, normalized (lowercase + trim + dedupe).
@@ -89,6 +95,7 @@ struct MergedRow {
     result_case_id: Option<Uuid>,
     result_case_number: Option<i32>,
     result_rotation: i32,
+    display_rotation: i32,
     diagram_data: JsonValue,
     tier1_tag: String,
     tags: Vec<String>,
@@ -119,6 +126,7 @@ impl MergedRow {
             result_case_id: self.result_case_id,
             result_case_number: self.result_case_number,
             result_rotation: self.result_rotation,
+            display_rotation: self.display_rotation,
             pattern,
             tier1_tag: self.tier1_tag,
             tags: self.tags,
@@ -146,6 +154,7 @@ SELECT
     COALESCE(ucs.result_case_id,  c.result_case_id)       AS result_case_id,
     rc.case_number                                        AS result_case_number,
     COALESCE(ucs.result_rotation, c.result_rotation)      AS result_rotation,
+    COALESCE(ucs.display_rotation, c.display_rotation)    AS display_rotation,
     c.diagram_data                                        AS diagram_data,
     c.tier1_tag                                           AS tier1_tag,
     COALESCE(ucs.tags,            c.tags)                 AS tags,
@@ -261,6 +270,7 @@ pub struct SettingsPatch {
     pub algorithm: Option<Option<String>>,
     pub result_case_id: Option<Option<Uuid>>,
     pub result_rotation: Option<Option<i32>>,
+    pub display_rotation: Option<Option<i32>>,
     pub tags: Option<Option<Vec<String>>>,
 }
 
@@ -271,6 +281,7 @@ struct ResolvedSettings {
     algorithm: Option<String>,
     result_case_id: Option<Uuid>,
     result_rotation: Option<i32>,
+    display_rotation: Option<i32>,
     tags: Option<Vec<String>>,
 }
 
@@ -280,6 +291,7 @@ impl ResolvedSettings {
             && self.algorithm.is_none()
             && self.result_case_id.is_none()
             && self.result_rotation.is_none()
+            && self.display_rotation.is_none()
             && self.tags.is_none()
     }
 }
@@ -413,15 +425,21 @@ pub async fn update_settings(
     }
 
     // Read current override row (may not exist).
-    let existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<Vec<String>>)> =
-        sqlx::query_as(
-            "SELECT nickname, algorithm, result_case_id, result_rotation, tags \
-             FROM user_case_settings WHERE user_id = $1 AND case_id = $2",
-        )
-        .bind(user_id)
-        .bind(case_id)
-        .fetch_optional(pool)
-        .await?;
+    let existing: Option<(
+        Option<String>,
+        Option<String>,
+        Option<Uuid>,
+        Option<i32>,
+        Option<i32>,
+        Option<Vec<String>>,
+    )> = sqlx::query_as(
+        "SELECT nickname, algorithm, result_case_id, result_rotation, display_rotation, tags \
+         FROM user_case_settings WHERE user_id = $1 AND case_id = $2",
+    )
+    .bind(user_id)
+    .bind(case_id)
+    .fetch_optional(pool)
+    .await?;
 
     let resolved = resolve(&patch, existing);
 
@@ -443,14 +461,15 @@ pub async fn update_settings(
         sqlx::query(
             r#"
             INSERT INTO user_case_settings
-                (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tags)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, display_rotation, tags)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (user_id, case_id) DO UPDATE SET
-                nickname        = EXCLUDED.nickname,
-                algorithm       = EXCLUDED.algorithm,
-                result_case_id  = EXCLUDED.result_case_id,
-                result_rotation = EXCLUDED.result_rotation,
-                tags            = EXCLUDED.tags
+                nickname         = EXCLUDED.nickname,
+                algorithm        = EXCLUDED.algorithm,
+                result_case_id   = EXCLUDED.result_case_id,
+                result_rotation  = EXCLUDED.result_rotation,
+                display_rotation = EXCLUDED.display_rotation,
+                tags             = EXCLUDED.tags
             "#,
         )
         .bind(user_id)
@@ -459,6 +478,7 @@ pub async fn update_settings(
         .bind(&resolved.algorithm)
         .bind(resolved.result_case_id)
         .bind(resolved.result_rotation)
+        .bind(resolved.display_rotation)
         .bind(resolved.tags.as_deref())
         .execute(pool)
         .await?;
@@ -469,14 +489,22 @@ pub async fn update_settings(
 
 fn resolve(
     patch: &SettingsPatch,
-    existing: Option<(Option<String>, Option<String>, Option<Uuid>, Option<i32>, Option<Vec<String>>)>,
+    existing: Option<(
+        Option<String>,
+        Option<String>,
+        Option<Uuid>,
+        Option<i32>,
+        Option<i32>,
+        Option<Vec<String>>,
+    )>,
 ) -> ResolvedSettings {
-    let (e_nick, e_alg, e_rcid, e_rot, e_tags) = existing.unwrap_or_default();
+    let (e_nick, e_alg, e_rcid, e_rot, e_disp, e_tags) = existing.unwrap_or_default();
     ResolvedSettings {
         nickname: apply_string(&patch.nickname, e_nick),
         algorithm: apply_string(&patch.algorithm, e_alg),
         result_case_id: apply_copy(patch.result_case_id, e_rcid),
         result_rotation: apply_copy(patch.result_rotation, e_rot),
+        display_rotation: apply_copy(patch.display_rotation, e_disp),
         tags: apply_clone(patch.tags.as_ref(), e_tags),
     }
 }

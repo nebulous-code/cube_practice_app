@@ -72,6 +72,8 @@ pub struct GuestSettings {
     #[serde(default)]
     pub result_rotation: Option<i32>,
     #[serde(default)]
+    pub display_rotation: Option<i32>,
+    #[serde(default)]
     pub tags: Vec<String>,
 }
 
@@ -135,6 +137,14 @@ impl GuestState {
                 if !(0..=3).contains(&rot) {
                     fields.insert(
                         format!("guest_state.settings.{cn}.result_rotation"),
+                        "Must be 0, 1, 2, or 3.".into(),
+                    );
+                }
+            }
+            if let Some(rot) = s.display_rotation {
+                if !(0..=3).contains(&rot) {
+                    fields.insert(
+                        format!("guest_state.settings.{cn}.display_rotation"),
                         "Must be 0, 1, 2, or 3.".into(),
                     );
                 }
@@ -261,6 +271,7 @@ impl GuestState {
                 && algorithm.is_none()
                 && result_case_id.is_none()
                 && s.result_rotation.is_none()
+                && s.display_rotation.is_none()
                 && tags.is_empty()
             {
                 continue;
@@ -269,8 +280,8 @@ impl GuestState {
             sqlx::query(
                 r#"
                 INSERT INTO user_case_settings
-                    (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tags)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, display_rotation, tags)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 "#,
             )
             .bind(user_id)
@@ -279,6 +290,7 @@ impl GuestState {
             .bind(&algorithm)
             .bind(result_case_id)
             .bind(s.result_rotation)
+            .bind(s.display_rotation)
             .bind(if tags.is_empty() { None } else { Some(&tags) })
             .execute(&mut **tx)
             .await?;
@@ -438,6 +450,7 @@ impl GuestState {
                 && algorithm.is_none()
                 && result_case_id.is_none()
                 && s.result_rotation.is_none()
+                && s.display_rotation.is_none()
                 && tags.is_empty()
             {
                 continue;
@@ -451,8 +464,8 @@ impl GuestState {
             sqlx::query(
                 r#"
                 INSERT INTO user_case_settings
-                    (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, tags)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    (user_id, case_id, nickname, algorithm, result_case_id, result_rotation, display_rotation, tags)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 "#,
             )
             .bind(user_id)
@@ -461,6 +474,7 @@ impl GuestState {
             .bind(&algorithm)
             .bind(result_case_id)
             .bind(s.result_rotation)
+            .bind(s.display_rotation)
             .bind(if tags.is_empty() { None } else { Some(&tags) })
             .execute(&mut **tx)
             .await?;
@@ -663,6 +677,7 @@ mod tests {
                 algorithm: None,
                 result_case_number: None,
                 result_rotation: None,
+                display_rotation: None,
                 tags: vec![],
             },
         );
@@ -713,6 +728,7 @@ mod tests {
                 algorithm: None,
                 result_case_number: None,
                 result_rotation: None,
+                display_rotation: None,
                 tags: vec!["a".repeat(TAG_MAX_LEN + 1)],
             },
         );
@@ -725,6 +741,7 @@ mod tests {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: vec![],
         }
     }
@@ -810,6 +827,24 @@ mod tests {
         g.result_rotation = Some(4);
         s.settings.insert("1".into(), g);
         assert_field_rejected(&s, "guest_state.settings.1.result_rotation");
+    }
+
+    #[test]
+    fn validate_rejects_negative_display_rotation() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.display_rotation = Some(-1);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.display_rotation");
+    }
+
+    #[test]
+    fn validate_rejects_too_large_display_rotation() {
+        let mut s = empty_state();
+        let mut g = empty_settings();
+        g.display_rotation = Some(4);
+        s.settings.insert("1".into(), g);
+        assert_field_rejected(&s, "guest_state.settings.1.display_rotation");
     }
 
     #[test]

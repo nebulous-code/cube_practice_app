@@ -24,6 +24,7 @@ export interface Case {
   result_case_id: string | null
   result_case_number: number | null
   result_rotation: number
+  display_rotation: number
   pattern: string
   tier1_tag: '+' | '-' | 'L' | '*'
   tags: string[]
@@ -38,6 +39,7 @@ export interface SettingsPatch {
   algorithm?: string | null
   result_case_id?: string | null
   result_rotation?: number | null
+  display_rotation?: number | null
   tags?: string[] | null
 }
 

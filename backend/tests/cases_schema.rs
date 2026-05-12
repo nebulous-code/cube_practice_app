@@ -74,6 +74,30 @@ async fn result_rotation_check_rejects_out_of_range() {
 }
 
 #[tokio::test]
+async fn display_rotation_check_rejects_out_of_range() {
+    let db = TestDb::new().await;
+    let stage_id = seed_stage(&db.pool).await;
+
+    let err = sqlx::query(
+        r#"
+        INSERT INTO cases
+            (solve_stage_id, case_number, algorithm, diagram_data, tier1_tag, display_rotation)
+        VALUES ($1, 1, 'R U R''', '{}'::jsonb, '*', 4)
+        "#,
+    )
+    .bind(stage_id)
+    .execute(&db.pool)
+    .await
+    .expect_err("insert should fail display_rotation check");
+
+    let msg = format!("{err}");
+    assert!(
+        msg.contains("display_rotation") || msg.contains("check"),
+        "expected check-constraint error, got: {msg}"
+    );
+}
+
+#[tokio::test]
 async fn case_number_unique_within_stage() {
     let db = TestDb::new().await;
     let stage_id = seed_stage(&db.pool).await;

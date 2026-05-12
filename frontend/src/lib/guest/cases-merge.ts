@@ -46,6 +46,7 @@ export function applyGuestPatch(
     algorithm: null,
     result_case_number: null,
     result_rotation: null,
+    display_rotation: null,
     tags: [],
   }
   const merged: GuestSettings = { ...existing }
@@ -69,6 +70,9 @@ export function applyGuestPatch(
   if (patch.result_rotation !== undefined) {
     merged.result_rotation = patch.result_rotation
   }
+  if (patch.display_rotation !== undefined) {
+    merged.display_rotation = patch.display_rotation
+  }
   if (patch.tags !== undefined) {
     if (patch.tags === null) {
       merged.tags = []
@@ -85,6 +89,7 @@ export function applyGuestPatch(
     merged.algorithm == null &&
     merged.result_case_number == null &&
     merged.result_rotation == null &&
+    merged.display_rotation == null &&
     merged.tags.length === 0
   ) {
     delete next.settings[key]
@@ -127,6 +132,10 @@ function mergeOne(
     }
     if (settings.result_rotation != null) {
       out.result_rotation = settings.result_rotation
+      hasOverrides = true
+    }
+    if (settings.display_rotation != null) {
+      out.display_rotation = settings.display_rotation
       hasOverrides = true
     }
     if (settings.tags.length > 0) {

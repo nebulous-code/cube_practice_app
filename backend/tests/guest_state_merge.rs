@@ -96,6 +96,7 @@ async fn merge_skips_settings_when_server_override_exists() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: vec![],
         },
     );
@@ -128,6 +129,7 @@ async fn merge_inserts_settings_when_no_server_override() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: vec!["fish".into()],
         },
     );
@@ -423,6 +425,7 @@ async fn merge_rejects_when_union_exceeds_tag_cap() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: (0..5).map(|i| format!("g{i}")).collect(),
         },
     );
@@ -470,6 +473,7 @@ fn empty_settings() -> GuestSettings {
         algorithm: None,
         result_case_number: None,
         result_rotation: None,
+        display_rotation: None,
         tags: vec![],
     }
 }

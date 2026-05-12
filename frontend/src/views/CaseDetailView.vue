@@ -69,6 +69,7 @@ const draftAlgorithm = ref('')
 const draftTags = ref('')
 const draftResultCaseNumber = ref<number>(0)
 const draftRotation = ref(0)
+const draftDisplayRotation = ref(0)
 
 const saving = ref(false)
 const formError = ref<string | null>(null)
@@ -81,6 +82,7 @@ function startEdit() {
   draftTags.value = current.value.tags.join(', ')
   draftResultCaseNumber.value = current.value.result_case_number ?? current.value.case_number
   draftRotation.value = current.value.result_rotation
+  draftDisplayRotation.value = current.value.display_rotation
   formError.value = null
   fieldErrors.value = {}
   editing.value = true
@@ -145,6 +147,15 @@ const resultRotationLabel = computed(() => {
   return ROTATION_LABELS[((r % 4) + 4) % 4]
 })
 
+// The case's own pattern shown in the meta-card. Live-rotates in edit mode
+// so the user sees the orientation they're about to save; otherwise applies
+// the saved display_rotation.
+const sourcePreviewPattern = computed(() => {
+  if (!current.value) return ''
+  const r = editing.value ? draftDisplayRotation.value : current.value.display_rotation
+  return rotatePattern(current.value.pattern, r)
+})
+
 // ─── Save ───────────────────────────────────────────────────────────────────
 function buildPatch(): SettingsPatch | null {
   if (!current.value) return null
@@ -183,6 +194,10 @@ function buildPatch(): SettingsPatch | null {
   }
   if (draftRotation.value !== c.result_rotation) {
     patch.result_rotation = draftRotation.value
+    touched = true
+  }
+  if (draftDisplayRotation.value !== c.display_rotation) {
+    patch.display_rotation = draftDisplayRotation.value
     touched = true
   }
 
@@ -314,7 +329,7 @@ async function onStartStudying() {
 
       <!-- Pattern + tags -->
       <section class="card meta-card">
-        <PatternDiagram :pattern="current.pattern" :size="120" />
+        <PatternDiagram :pattern="sourcePreviewPattern" :size="120" />
         <div class="meta">
           <p class="section-eyebrow">Primary shape</p>
           <p class="meta-value">{{ TIER1_LABELS[current.tier1_tag] ?? current.tier1_tag }}</p>
@@ -332,6 +347,22 @@ async function onStartStudying() {
             placeholder="e.g. fish, needs work"
           />
           <p v-if="editing && fieldErrors.tags" class="error">{{ fieldErrors.tags }}</p>
+
+          <template v-if="editing">
+            <p class="section-eyebrow">Display rotation</p>
+            <div class="rot-grid">
+              <button
+                v-for="r in [0, 1, 2, 3]"
+                :key="r"
+                type="button"
+                class="rot-btn"
+                :class="{ active: draftDisplayRotation === r }"
+                @click="draftDisplayRotation = r"
+              >
+                {{ ROTATION_LABELS[r] }}
+              </button>
+            </div>
+          </template>
         </div>
       </section>
 

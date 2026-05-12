@@ -12,6 +12,7 @@ export interface GuestSettings {
   algorithm?: string | null
   result_case_number?: number | null
   result_rotation?: number | null
+  display_rotation?: number | null
   tags: string[]
 }
 

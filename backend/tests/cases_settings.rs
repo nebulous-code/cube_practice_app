@@ -394,6 +394,73 @@ async fn result_rotation_some_none_clears_to_global() {
     assert_eq!(merged.nickname.as_deref(), Some("keep me"));
 }
 
+// ─── display_rotation override paths ────────────────────────────────────────
+
+#[tokio::test]
+async fn display_rotation_override_lands_and_clears() {
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    // Global default is 0; set the override to 1 (90° CW).
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            display_rotation: Some(Some(1)),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("set display_rotation");
+
+    assert_eq!(merged.display_rotation, 1);
+    assert!(merged.has_overrides);
+
+    // Clear with Some(None) — falls back to the global default 0.
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            display_rotation: Some(None),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("clear display_rotation");
+
+    assert_eq!(merged.display_rotation, 0);
+    // No other fields were set, so the override row should be gone.
+    assert!(!merged.has_overrides);
+}
+
+#[tokio::test]
+async fn display_rotation_independent_of_result_rotation() {
+    // Sanity: setting one doesn't disturb the other. Documents the
+    // intentional non-composition design.
+    let db = TestDb::new().await;
+    let user = seed_user(&db.pool, "alice@example.com").await;
+    let case = case_id_by_number(&db.pool, 1).await;
+
+    let merged = cases::update_settings(
+        &db.pool,
+        user,
+        case,
+        SettingsPatch {
+            display_rotation: Some(Some(2)),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(merged.display_rotation, 2);
+    // result_rotation untouched — picks up the global default for case 1.
+    assert_eq!(merged.result_rotation, 2);
+}
+
 async fn seed_user(pool: &sqlx::PgPool, email: &str) -> Uuid {
     let row: (Uuid,) = sqlx::query_as(
         "INSERT INTO users (email, display_name, password_hash, email_verified) \

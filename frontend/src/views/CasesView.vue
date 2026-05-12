@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import CaseStatePip from '@/components/CaseStatePip.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import PatternDiagram from '@/components/PatternDiagram.vue'
+import { rotatePattern } from '@/lib/pattern'
 import { type Case, type CaseState, useCasesStore } from '@/stores/cases'
 
 const router = useRouter()
@@ -246,7 +247,7 @@ function pad2(n: number): string {
         @click="goCase(c.id)"
       >
         <div class="tile-pattern">
-          <PatternDiagram :pattern="c.pattern" :size="90" />
+          <PatternDiagram :pattern="rotatePattern(c.pattern, c.display_rotation)" :size="90" />
           <CaseStatePip :state="c.state" class="tile-pip" />
         </div>
         <p class="tile-num">Case {{ pad2(c.case_number) }}</p>

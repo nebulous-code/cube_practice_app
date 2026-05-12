@@ -94,6 +94,7 @@ async fn import_settings_lands_with_overrides_translated() {
             algorithm: Some("F R U R' U' F'".into()),
             result_case_number: Some(21),
             result_rotation: Some(1),
+            display_rotation: None,
             tags: vec!["fish".into(), "needs work".into()],
         },
     );
@@ -234,6 +235,7 @@ async fn import_skips_settings_rows_with_no_real_overrides() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: vec![],
         },
     );
@@ -244,6 +246,7 @@ async fn import_skips_settings_rows_with_no_real_overrides() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags: vec![],
         },
     );
@@ -278,6 +281,7 @@ async fn import_rejects_blob_over_distinct_tag_cap() {
             algorithm: None,
             result_case_number: None,
             result_rotation: None,
+            display_rotation: None,
             tags,
         },
     );
@@ -305,6 +309,7 @@ async fn import_rejects_blob_over_link_cap() {
                 algorithm: None,
                 result_case_number: None,
                 result_rotation: None,
+                display_rotation: None,
                 tags,
             },
         );
@@ -354,6 +359,7 @@ fn empty_settings() -> GuestSettings {
         algorithm: None,
         result_case_number: None,
         result_rotation: None,
+        display_rotation: None,
         tags: vec![],
     }
 }

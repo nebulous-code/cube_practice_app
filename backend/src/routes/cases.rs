@@ -69,6 +69,8 @@ pub struct UpdateSettingsRequest {
     #[serde(default, deserialize_with = "deserialize_optional_field")]
     result_rotation: Option<Option<i32>>,
     #[serde(default, deserialize_with = "deserialize_optional_field")]
+    display_rotation: Option<Option<i32>>,
+    #[serde(default, deserialize_with = "deserialize_optional_field")]
     tags: Option<Option<Vec<String>>>,
 }
 
@@ -118,6 +120,15 @@ async fn update_settings(
         }
     }
 
+    if let Some(Some(rot)) = req.display_rotation {
+        if !(0..=3).contains(&rot) {
+            fields.insert(
+                "display_rotation".into(),
+                "Must be 0, 1, 2, or 3.".into(),
+            );
+        }
+    }
+
     if !fields.is_empty() {
         return Err(AppError::Validation(fields));
     }
@@ -127,6 +138,7 @@ async fn update_settings(
         algorithm,
         result_case_id: req.result_case_id,
         result_rotation: req.result_rotation,
+        display_rotation: req.display_rotation,
         tags,
     };
 
