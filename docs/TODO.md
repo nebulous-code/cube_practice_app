@@ -10,20 +10,20 @@ Things that need a human decision, content, design, or external action — items
 - [x] **Privacy Policy content.** Static page at `/privacy` ships with placeholder text. Same link surfaces as Terms.
 - [x] **OLL case numbering universality.** Confirm the 1–57 numbering used in `data.jsx` (and seeded into `cases.case_number`) matches the cubing-community convention. ~30-min check; renumbering after launch breaks any URL or progress data already keyed on case number.
     - speedsolving.com has the best universal case numbering.
-- [ ] Update Case numbering
-- [ ] Add Case Presentation Rotation
+- [x] Update Case numbering
+- [x] Add Case Presentation Rotation
 - [ ] Update fonts to be stored and served locally.
 - [ ] Create a me@nebulouscode.com email address
 
 ## Cosmetic but visible to first-time users
 
-- [ ] **Onboarding screen real copy + design.** `OnboardingView.vue` ships placeholder copy for the two-step screen ("Practice OLL with intention" / "Weakest cases come first"). Designer was going to take a pass once the product was further along.
+- [x] **Onboarding screen real copy + design.** `OnboardingView.vue` ships placeholder copy for the two-step screen ("Practice OLL with intention" / "Weakest cases come first"). Designer was going to take a pass once the product was further along.
 - [ ] **Landing page copy.** `LandingView.vue` ships placeholder marketing copy (hero, feature bullets, how-it-works steps, CTAs). Replace before public launch.
 - [x] **README.md** Need to add a readme so that people that land on the github page can get a sense of the project
 
 ## Optional for MVP
 
-- [ ] **Acknowledgements page real content.** Currently placeholder. Post-MVP can auto-generate from `package.json` / `Cargo.toml` license metadata.
+- [x] **Acknowledgements page real content.** Currently placeholder. Post-MVP can auto-generate from `package.json` / `Cargo.toml` license metadata.
 - [ ]  **Remove API URL Redirect** Render charges per url redirect. we're using two api.cube.neb... and cube.neb... we could live without api.cube.neb... and just point to api-cube.onrender.com. 
 
 ## Known bugs

@@ -1,12 +1,8 @@
 <script setup lang="ts">
-// Two-step onboarding stub at /welcome. Triggered exactly once via
+// Three-step onboarding at /welcome. Triggered exactly once via
 // VerifyEmailView's success handler when has_seen_onboarding === false.
 // Both completion and skip mark the flag on the backend then route to
 // /practice. See docs/milestones/05_polish_and_static_pages.md §5.
-//
-// Copy is placeholder — see docs/TODO.md "Onboarding flow" for the swap
-// point. The designer-driven content lands later; this view exists so
-// the wiring is in place.
 
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -16,11 +12,12 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
-const step = ref<1 | 2>(1)
+const step = ref<1 | 2 | 3>(1)
 const finishing = ref(false)
 
 function next() {
-  step.value = 2
+  if (step.value === 1) step.value = 2
+  else if (step.value === 2) step.value = 3
 }
 
 async function finish() {
@@ -43,21 +40,35 @@ async function finish() {
     </button>
 
     <article v-if="step === 1" class="card">
-      <p class="eyebrow">Step 1 of 2</p>
-      <h1 class="title">Practice OLL with intention</h1>
+      <p class="eyebrow">Welcome</p>
+      <h1 class="title">All 57, eventually</h1>
       <p class="body">
-        Quiet Cube helps you build muscle memory for the cases you don't
-        yet know — without grinding the ones you've already locked in.
+        Quiet Cube helps you go from one OLL algorithm to all of them,
+        without grinding the cases you've already locked in. Bring a solved
+        cube — you'll be executing algorithms against it.
+      </p>
+      <button type="button" class="cta primary" @click="next">Next →</button>
+    </article>
+
+    <article v-else-if="step === 2" class="card">
+      <p class="eyebrow">The loop</p>
+      <h1 class="title">Solve, flip, grade</h1>
+      <p class="body">
+        Each card shows an OLL case. Execute your algorithm, flip the card,
+        compare your cube to the expected pattern. Grade yourself Fail /
+        Hard / Good / Easy. The schedule does the rest.
       </p>
       <button type="button" class="cta primary" @click="next">Next →</button>
     </article>
 
     <article v-else class="card">
-      <p class="eyebrow">Step 2 of 2</p>
-      <h1 class="title">Weakest cases come first</h1>
+      <p class="eyebrow">Make it yours</p>
+      <h1 class="title">Your algorithms, your cube</h1>
       <p class="body">
-        Each session pulls the cases that need your attention most. Grade
-        yourself honestly and the schedule does the rest.
+        Don't like the default algorithm for a case? Edit it — and update
+        the expected result to match. Quiet Cube doesn't care which alg
+        you use, only that you remember the one you chose. No leaderboards,
+        no noise, just OLL and your progress.
       </p>
       <button
         type="button"
