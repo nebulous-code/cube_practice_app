@@ -1,4 +1,4 @@
-//! Library crate for the Cube Practice backend. Exposes the modules so
+//! Library crate for the Quiet Cube backend. Exposes the modules so
 //! integration tests can call into them directly (e.g. `cases::list_for_user`).
 //! `src/main.rs` is a thin wrapper that calls `run()`.
 

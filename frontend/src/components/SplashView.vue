@@ -64,7 +64,7 @@ onBeforeUnmount(() => {
     <div class="logo" :style="{ transform: `rotate(${angle}deg)`, transition }">
       <LogoMark :size="88" />
     </div>
-    <p class="word">Cube Practice</p>
+    <p class="word">Quiet Cube</p>
     <p class="tag">a quiet place to drill</p>
     <Transition name="fade">
       <p v-if="showColdStart" class="cold-start">

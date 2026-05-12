@@ -8,7 +8,7 @@ Detailed design + story list for M5. Scope set in `docs/milestones/README.md`. A
 
 By the end of M5:
 
-- A public landing page lives at `/` — what Cube Practice is, who it's for, and a "Sign in" CTA front-and-center for existing users (also a top-right link). The authed dashboard moves from `/` to `/practice`.
+- A public landing page lives at `/` — what Quiet Cube is, who it's for, and a "Sign in" CTA front-and-center for existing users (also a top-right link). The authed dashboard moves from `/` to `/practice`.
 - Every static page in the spec is reachable, styled, and linked: `/about`, `/terms`, `/privacy`, `/acknowledgements`. Placeholder copy is fine — real Terms / Privacy content lands separately per `docs/TODO.md`.
 - Registration screen carries the "By creating an account you agree to our Terms…" footer with working links to `/terms` and `/privacy`.
 - Every authenticated view has a polished fresh-account empty state, not a blank/zero rendering. Specifically: dashboard with zero reviews, study tab with zero due cards, progress with all-not-started, cases browser with empty filter results.
@@ -108,7 +108,7 @@ Existing static-page routes (`/about`, `/terms`, `/privacy`, `/acknowledgements`
 ### Components / views
 
 - **`<LandingView>`** at `/` — public marketing page. Layout, top to bottom:
-  1. **Top bar.** Wordmark on the left ("Cube Practice"), single "Sign in" link on the right (routes to `/login`).
+  1. **Top bar.** Wordmark on the left ("Quiet Cube"), single "Sign in" link on the right (routes to `/login`).
   2. **Hero.** Centered. Logo mark above the title. Title + tagline + two CTAs side by side: primary "Sign in →" (routes to `/login`), secondary "Create an account" (routes to `/register`). This is the front-and-center login surface for existing users.
   3. **Feature list.** Four short bullets describing what's in the app today.
   4. **How it works.** Three numbered steps, kept brief.
@@ -119,7 +119,7 @@ Existing static-page routes (`/about`, `/terms`, `/privacy`, `/acknowledgements`
 
   **Placeholder copy** (replace before launch — tracked in `docs/TODO.md`):
 
-  > **Cube Practice**
+  > **Quiet Cube**
   > *a quiet place to drill*
   >
   > Spaced repetition for Rubik's cube algorithms. Build muscle memory for the cases you don't yet know, and keep the ones you do sharp.

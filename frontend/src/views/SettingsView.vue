@@ -262,7 +262,7 @@ function goBack() {
     <section class="card">
       <p class="section-eyebrow">About</p>
       <nav class="legal-links">
-        <RouterLink to="/about">About Cube Practice</RouterLink>
+        <RouterLink to="/about">About Quiet Cube</RouterLink>
         <RouterLink to="/terms">Terms of Service</RouterLink>
         <RouterLink to="/privacy">Privacy Policy</RouterLink>
         <RouterLink to="/acknowledgements">Acknowledgements</RouterLink>

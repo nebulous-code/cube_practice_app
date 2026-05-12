@@ -46,7 +46,7 @@ async function finish() {
       <p class="eyebrow">Step 1 of 2</p>
       <h1 class="title">Practice OLL with intention</h1>
       <p class="body">
-        Cube Practice helps you build muscle memory for the cases you don't
+        Quiet Cube helps you build muscle memory for the cases you don't
         yet know — without grinding the ones you've already locked in.
       </p>
       <button type="button" class="cta primary" @click="next">Next →</button>

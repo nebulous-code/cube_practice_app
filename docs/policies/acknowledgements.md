@@ -6,13 +6,13 @@ I'm a software developer who enjoys solving the Rubik's cube and wanted a system
 
 ## Algorithms and case references
 
-The OLL algorithms used in Cube Practice come from **_Speedsolving the Cube_ by Dan Harris**.
+The OLL algorithms used in Quiet Cube come from **_Speedsolving the Cube_ by Dan Harris**.
 
 The case numbering convention follows the [Speedsolving.com wiki's OLL page](https://www.speedsolving.com/wiki/index.php/OLL), which is the de facto standard reference in the cubing community.
 
 ## Inspiration
 
-Cube Practice wouldn't exist without these projects and resources:
+Quiet Cube wouldn't exist without these projects and resources:
 
 - **[Anki](https://apps.ankiweb.net/)** — for proving how powerful spaced repetition can be as a learning tool, and for inspiring the SM-2 review approach used here.
 - **[J Perm](https://jperm.net/)** — for setting the bar on clear, accessible cubing instruction and online practice tools.
@@ -21,7 +21,7 @@ Cube Practice wouldn't exist without these projects and resources:
 
 ## Fonts
 
-Cube Practice uses three typefaces, all licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL):
+Quiet Cube uses three typefaces, all licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL):
 
 - **Newsreader**
 - **Inter Tight**
@@ -33,11 +33,11 @@ This site is protected by reCAPTCHA and the Google [Privacy Policy](https://poli
 
 ## Open-source dependencies
 
-Cube Practice is built on top of many open-source libraries from the npm and Rust crates ecosystems. License texts for those dependencies are preserved in `node_modules` and `Cargo.lock` per the conventions of each ecosystem.
+Quiet Cube is built on top of many open-source libraries from the npm and Rust crates ecosystems. License texts for those dependencies are preserved in `node_modules` and `Cargo.lock` per the conventions of each ecosystem.
 
 ## License and source
 
-Cube Practice is source-available under the [Polyform Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/). You're welcome to use, modify, and share the code for any noncommercial purpose.
+Quiet Cube is source-available under the [Polyform Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/). You're welcome to use, modify, and share the code for any noncommercial purpose.
 
 If you'd like to support the project, you can do so via [GitHub Sponsors](https://github.com/sponsors/nebulous-code).
 

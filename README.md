@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/public/icon-512.png" alt="Cube Practice logo" width="128" />
+  <img src="frontend/public/icon-512.png" alt="Quiet Cube logo" width="128" />
 </p>
 
-# Cube Practice
+# Quiet Cube
 
 *A quiet place to drill.*
 

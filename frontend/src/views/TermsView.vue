@@ -11,7 +11,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h2>About these terms</h2>
     <p>
-      Cube Practice ("the service", "the app", "we", "us") is a non-commercial hobby/portfolio project that helps users practice puzzle cube algorithms in a focused, distraction-free environment. These Terms of Service ("Terms") govern your use of the hosted application at our website. The source code may be published in a public repository from time to time; if so, your rights to the code are governed by the license posted in that repository (currently the <strong>PolyForm Noncommercial License 1.0.0</strong>), not by these Terms. We make no commitment to keep the code publicly available and may make the repository private at any time without notice. These Terms govern only the hosted service.
+      Quiet Cube ("the service", "the app", "we", "us") is a non-commercial hobby/portfolio project that helps users practice puzzle cube algorithms in a focused, distraction-free environment. These Terms of Service ("Terms") govern your use of the hosted application at our website. The source code may be published in a public repository from time to time; if so, your rights to the code are governed by the license posted in that repository (currently the <strong>PolyForm Noncommercial License 1.0.0</strong>), not by these Terms. We make no commitment to keep the code publicly available and may make the repository private at any time without notice. These Terms govern only the hosted service.
     </p>
     <p>
       By creating an account or otherwise using the service, you agree to these Terms and to our <RouterLink to="/privacy">Privacy Policy</RouterLink>. If you don't agree, don't use the service.
@@ -22,7 +22,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h2>1. Eligibility</h2>
     <p>
-      You must be at least 13 years old to use Cube Practice. By creating an account, you represent that you are at least 13.
+      You must be at least 13 years old to use Quiet Cube. By creating an account, you represent that you are at least 13.
     </p>
     <p>
       We do not knowingly allow anyone under 13 to use the service. If we learn that an account belongs to someone under 13, we will delete it.
@@ -156,7 +156,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h3>Our content</h3>
     <p>
-      The Cube Practice website, including its UI, source code, landing page copy, logo (a stylized algorithm case), and other original content, is owned by the maintainer (nebulous-code) and protected by copyright and other intellectual property laws.
+      The Quiet Cube website, including its UI, source code, landing page copy, logo (a stylized algorithm case), and other original content, is owned by the maintainer (nebulous-code) and protected by copyright and other intellectual property laws.
     </p>
     <p>
       The source code may, at our discretion, be published in a public repository. If it is, your rights to the code are governed by the license posted in that repository, not by these Terms. As of this version of the Terms, that license is the <strong>PolyForm Noncommercial License 1.0.0</strong> — anyone may read, run, modify, and redistribute the code for any noncommercial purpose; commercial use of the code itself, including standing up a competing hosted version of the service for resale, is reserved to the maintainer. We may change the license posted in the repository or make the repository private at any time without notice; doing so does not change these Terms or your rights to the hosted service.
@@ -174,7 +174,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h3>Trademarks</h3>
     <p>
-      We hold no registered trademarks for "Cube Practice" or the logo. This is not an invitation to register them yourself.
+      We hold no registered trademarks for "Quiet Cube" or the logo. This is not an invitation to register them yourself.
     </p>
 
     <h2>11. Governing law and disputes</h2>

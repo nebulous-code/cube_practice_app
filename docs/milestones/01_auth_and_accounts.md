@@ -182,30 +182,30 @@ A single error envelope across the surface:
 Three messages, sent through Resend's REST API. Markdown-style copy below; HTML versions get the same content with the app's paper aesthetic in inline styles.
 
 ### 5.1 Verification — initial registration
-Subject: **Verify your Cube Practice email**
+Subject: **Verify your Quiet Cube email**
 
 Body:
-> Welcome to Cube Practice.
+> Welcome to Quiet Cube.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. If you didn't sign up, you can ignore this email.
 
 ### 5.2 Verification — email change
-Subject: **Confirm your new Cube Practice email**
+Subject: **Confirm your new Quiet Cube email**
 
 Body:
-> You requested to change the email on your Cube Practice account to **{new_email}**.
+> You requested to change the email on your Quiet Cube account to **{new_email}**.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. Until you confirm, sign-in will continue to work with your previous email.
 
 ### 5.3 Password reset
-Subject: **Reset your Cube Practice password**
+Subject: **Reset your Quiet Cube password**
 
 Body:
-> Someone requested a password reset for your Cube Practice account.
+> Someone requested a password reset for your Quiet Cube account.
 >
 > Your 6-digit reset code is: **`{code}`**
 >
@@ -307,7 +307,7 @@ JWT_SECRET            # 256-bit random
 RECAPTCHA_SECRET_KEY  # Google reCAPTCHA v3 secret
 RECAPTCHA_MIN_SCORE   # default 0.5
 RESEND_API_KEY        # Resend API key
-EMAIL_FROM            # verified sender, e.g. "Cube Practice <noreply@mail.nebulouscode.com>"
+EMAIL_FROM            # verified sender, e.g. "Quiet Cube <noreply@mail.nebulouscode.com>"
 FRONTEND_URL          # CORS allowlist + email link generation
 RUST_LOG              # default "info,oll=debug"
 ARGON2_M_KIB          # default 19456

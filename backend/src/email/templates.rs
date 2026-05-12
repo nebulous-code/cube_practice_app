@@ -18,13 +18,13 @@ fn code_box(code: &str) -> String {
 
 pub fn verification(code: &str) -> Email {
     let text = format!(
-        "Welcome to Cube Practice.\n\n\
+        "Welcome to Quiet Cube.\n\n\
          Your 6-digit verification code is: {code}\n\n\
          This code expires in 10 minutes. If you didn't sign up, ignore this email."
     );
     let html = format!(
         "{HTML_HEAD}\
-         <p style=\"margin:0 0 16px;\">Welcome to Cube Practice.</p>\
+         <p style=\"margin:0 0 16px;\">Welcome to Quiet Cube.</p>\
          <p style=\"margin:0;\">Your 6-digit verification code:</p>\
          {code_html}\
          <p style=\"font-size:13px; color:#6E6455; margin:0;\">This code expires in 10 minutes. If you didn't sign up, ignore this email.</p>\
@@ -32,7 +32,7 @@ pub fn verification(code: &str) -> Email {
         code_html = code_box(code)
     );
     Email {
-        subject: "Verify your Cube Practice email".into(),
+        subject: "Verify your Quiet Cube email".into(),
         text,
         html,
     }
@@ -40,13 +40,13 @@ pub fn verification(code: &str) -> Email {
 
 pub fn email_change_verification(code: &str, new_email: &str) -> Email {
     let text = format!(
-        "You requested to change the email on your Cube Practice account to {new_email}.\n\n\
+        "You requested to change the email on your Quiet Cube account to {new_email}.\n\n\
          Your 6-digit verification code is: {code}\n\n\
          This code expires in 10 minutes. Until you confirm, sign-in continues to work with your previous email."
     );
     let html = format!(
         "{HTML_HEAD}\
-         <p style=\"margin:0 0 16px;\">You requested to change the email on your Cube Practice account to <strong>{new_email}</strong>.</p>\
+         <p style=\"margin:0 0 16px;\">You requested to change the email on your Quiet Cube account to <strong>{new_email}</strong>.</p>\
          <p style=\"margin:0;\">Your 6-digit verification code:</p>\
          {code_html}\
          <p style=\"font-size:13px; color:#6E6455; margin:0;\">This code expires in 10 minutes. Until you confirm, sign-in continues to work with your previous email.</p>\
@@ -54,7 +54,7 @@ pub fn email_change_verification(code: &str, new_email: &str) -> Email {
         code_html = code_box(code)
     );
     Email {
-        subject: "Confirm your new Cube Practice email".into(),
+        subject: "Confirm your new Quiet Cube email".into(),
         text,
         html,
     }
@@ -62,13 +62,13 @@ pub fn email_change_verification(code: &str, new_email: &str) -> Email {
 
 pub fn password_reset(code: &str) -> Email {
     let text = format!(
-        "Someone requested a password reset for your Cube Practice account.\n\n\
+        "Someone requested a password reset for your Quiet Cube account.\n\n\
          Your 6-digit reset code is: {code}\n\n\
          This code expires in 1 hour. If you didn't request a reset, ignore this email — your password hasn't changed."
     );
     let html = format!(
         "{HTML_HEAD}\
-         <p style=\"margin:0 0 16px;\">Someone requested a password reset for your Cube Practice account.</p>\
+         <p style=\"margin:0 0 16px;\">Someone requested a password reset for your Quiet Cube account.</p>\
          <p style=\"margin:0;\">Your 6-digit reset code:</p>\
          {code_html}\
          <p style=\"font-size:13px; color:#6E6455; margin:0;\">This code expires in 1 hour. If you didn't request a reset, ignore this email — your password hasn't changed.</p>\
@@ -76,7 +76,7 @@ pub fn password_reset(code: &str) -> Email {
         code_html = code_box(code)
     );
     Email {
-        subject: "Reset your Cube Practice password".into(),
+        subject: "Reset your Quiet Cube password".into(),
         text,
         html,
     }
@@ -92,7 +92,7 @@ mod tests {
         assert!(e.text.contains("123456"));
         assert!(e.text.contains("10 minutes"));
         assert!(e.html.contains("123456"));
-        assert_eq!(e.subject, "Verify your Cube Practice email");
+        assert_eq!(e.subject, "Verify your Quiet Cube email");
     }
 
     #[test]

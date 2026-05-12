@@ -1,6 +1,6 @@
 {
-  "name": "Cube Practice",
-  "short_name": "Cube Practice",
+  "name": "Quiet Cube",
+  "short_name": "Quiet Cube",
   "description": "Spaced-repetition practice for Rubik's cube algorithms.",
   "start_url": "/",
   "display": "standalone",

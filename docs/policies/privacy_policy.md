@@ -4,7 +4,7 @@
 
 ## About this policy
 
-Cube Practice ("the app", "we", "us") is a hobby/portfolio project that helps users practice Rubik's cube and other puzzle cube algorithms. This policy explains what we collect, why, and what you can do about it. We've tried to write it in plain English. If anything is unclear, email **me@nebulouscode.com**.
+Quiet Cube ("the app", "we", "us") is a hobby/portfolio project that helps users practice Rubik's cube and other puzzle cube algorithms. This policy explains what we collect, why, and what you can do about it. We've tried to write it in plain English. If anything is unclear, email **me@nebulouscode.com**.
 
 This is a non-commercial project. We are not a company. We don't sell data, we don't run ads, and we don't share your information with marketing partners.
 
@@ -109,7 +109,7 @@ The app itself does not process payments. The Acknowledgements page links to a G
 
 ## Children
 
-Cube Practice is not directed to children under 13, and we do not knowingly collect personal information from anyone under 13. If you believe a child under 13 has created an account, email **me@nebulouscode.com** and we will delete it.
+Quiet Cube is not directed to children under 13, and we do not knowingly collect personal information from anyone under 13. If you believe a child under 13 has created an account, email **me@nebulouscode.com** and we will delete it.
 
 We do not perform age verification.
 

@@ -1,4 +1,4 @@
-// Axios client for the Cube Practice backend.
+// Axios client for the Quiet Cube backend.
 // - Base URL from VITE_API_BASE_URL (falls back to localhost:8080 for dev).
 // - withCredentials so the httpOnly session cookie travels.
 // - Error envelope `{ error, message, fields? }` is unwrapped into ApiError so

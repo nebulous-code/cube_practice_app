@@ -1,4 +1,4 @@
-# Cube Practice App — Design Document
+# Quiet Cube App — Design Document
 
 ## 1. Product Scope
 

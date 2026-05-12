@@ -1,7 +1,7 @@
 # concepts/
 
 Evergreen explanatory docs about the philosophy and domain knowledge that
-underpins Cube Practice. These aren't reference material (the live spec is
+underpins Quiet Cube. These aren't reference material (the live spec is
 `docs/ARCHITECTURE.md`) and they aren't a phase log (that's
 `docs/CHANGELOG.md` and `docs/milestones/`). They're the *why* of the system —
 the parts that need explaining to someone working on the code, and that

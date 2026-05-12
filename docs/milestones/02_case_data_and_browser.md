@@ -191,7 +191,7 @@ No rate limiting on case endpoints — they're auth-gated and not credential-adj
 The shell is rendered inside the existing `requiresAuth` route. Tab navigation rewrites the URL (`/`, `/cases`, `/progress`) so back-button works. Per `outstanding_decision.md` §1.5, settings sits behind a top-right user icon — wire that icon at the shell level, not inside individual tab views.
 
 ### Components
-- **`AppShell.vue`** — fixed top bar (eyebrow `Cube Practice`, display name on the right with click-to-`/settings`), fixed bottom tab bar with three tabs, slot for the active tab content. Replaces the M1 single-card `HomeView`.
+- **`AppShell.vue`** — fixed top bar (eyebrow `Quiet Cube`, display name on the right with click-to-`/settings`), fixed bottom tab bar with three tabs, slot for the active tab content. Replaces the M1 single-card `HomeView`.
 - **`TabBar.vue`** — three icon+label tabs. Practice (placeholder), Cases (active in M2), Progress (placeholder). Active tab gets the ink color, others get `--paper-ink-muted`.
 - **`PatternDiagram.vue`** — Vue port of `initial_design/src/diagram.jsx`. Props: `pattern: string` (9 chars), `size?: number` (default 120). Pure SVG output, no event handlers. Side strips (`T`/`L`/`R`/`B`) render as small rectangles outside the 3×3 face per the prototype's geometry. The prototype's unused `tone='dark'` branch is **not** ported — the prototype is light-only and dark mode is a post-MVP feature that would touch every component, not just the diagram.
 - **`CaseTile.vue`** — small card for the grid: pattern at 90px, case number, nickname (if any). No grade pip in M2 (that needs progress data — M3).

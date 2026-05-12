@@ -7,7 +7,7 @@ import StaticPageView from './StaticPageView.vue'
     <p class="placeholder">Placeholder copy — fill in before public launch.</p>
 
     <p>
-      Cube Practice stands on the work of the global cubing community —
+      Quiet Cube stands on the work of the global cubing community —
       decades of algorithm research, naming conventions, and shared notation.
     </p>
 
@@ -32,7 +32,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h2>Support the project</h2>
     <p>
-      Cube Practice is a solo side project. If it's useful to you, drop a
+      Quiet Cube is a solo side project. If it's useful to you, drop a
       star on
       <a
         href="https://github.com/nebulous-code/cube_practice_app"

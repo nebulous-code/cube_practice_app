@@ -241,7 +241,7 @@ laptop + an iPhone or Android works). Anything that fails goes in
 - [ ] Same path while signed out → CTA reads "Back to login"
 
 ### Splash
-- [ ] Splash screen shows logo + "Cube Practice" wordmark + "a quiet place to drill" tagline on initial load
+- [ ] Splash screen shows logo + "Quiet Cube" wordmark + "a quiet place to drill" tagline on initial load
 - [ ] Logo rotates with overshoot animation (or stays still under `prefers-reduced-motion`)
 - [ ] Cold-start message ("warming up the server — first visits take a moment") fades in after ~5s on a cold backend
 - [ ] On a warm backend the splash unmounts before the cold-start message ever appears

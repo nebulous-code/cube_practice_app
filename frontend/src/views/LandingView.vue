@@ -25,7 +25,7 @@ function startAsGuest() {
 <template>
   <div class="landing">
     <header class="topbar">
-      <RouterLink to="/" class="brand">Cube Practice</RouterLink>
+      <RouterLink to="/" class="brand">Quiet Cube</RouterLink>
       <RouterLink to="/login" class="signin-link">Sign in</RouterLink>
     </header>
 
@@ -34,7 +34,7 @@ function startAsGuest() {
         <div class="logo">
           <LogoMark :size="72" />
         </div>
-        <h1 class="title">Cube Practice</h1>
+        <h1 class="title">Quiet Cube</h1>
         <p class="tag">a quiet place to drill</p>
         <p class="lede">
           Spaced repetition for Rubik's cube algorithms. Build muscle memory for

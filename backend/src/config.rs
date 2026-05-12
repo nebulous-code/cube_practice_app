@@ -28,7 +28,7 @@ impl Config {
             jwt_secret,
             resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
             email_from: env::var("EMAIL_FROM")
-                .unwrap_or_else(|_| "Cube Practice <onboarding@resend.dev>".to_string()),
+                .unwrap_or_else(|_| "Quiet Cube <onboarding@resend.dev>".to_string()),
             recaptcha_secret_key: env::var("RECAPTCHA_SECRET_KEY").unwrap_or_default(),
             recaptcha_min_score: env::var("RECAPTCHA_MIN_SCORE")
                 .ok()

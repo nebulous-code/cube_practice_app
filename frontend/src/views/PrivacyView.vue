@@ -8,7 +8,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h2>About this policy</h2>
     <p>
-      Cube Practice ("the app", "we", "us") is a hobby/portfolio project that helps users practice Rubik's cube and other puzzle cube algorithms. This policy explains what we collect, why, and what you can do about it. We've tried to write it in plain English. If anything is unclear, email <strong>me@nebulouscode.com</strong>.
+      Quiet Cube ("the app", "we", "us") is a hobby/portfolio project that helps users practice Rubik's cube and other puzzle cube algorithms. This policy explains what we collect, why, and what you can do about it. We've tried to write it in plain English. If anything is unclear, email <strong>me@nebulouscode.com</strong>.
     </p>
     <p>
       This is a non-commercial project. We are not a company. We don't sell data, we don't run ads, and we don't share your information with marketing partners.
@@ -165,7 +165,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h2>Children</h2>
     <p>
-      Cube Practice is not directed to children under 13, and we do not knowingly collect personal information from anyone under 13. If you believe a child under 13 has created an account, email <strong>me@nebulouscode.com</strong> and we will delete it.
+      Quiet Cube is not directed to children under 13, and we do not knowingly collect personal information from anyone under 13. If you believe a child under 13 has created an account, email <strong>me@nebulouscode.com</strong> and we will delete it.
     </p>
     <p>
       We do not perform age verification.

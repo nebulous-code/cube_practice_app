@@ -1,6 +1,6 @@
 # Architecture
 
-The live reference for how Cube Practice is built today. This doc tracks
+The live reference for how Quiet Cube is built today. This doc tracks
 the system as it actually runs in production at
 [cube.nebulouscode.com](https://cube.nebulouscode.com), not the original
 spec — that lives in
