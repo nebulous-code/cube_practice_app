@@ -109,25 +109,6 @@ forthcoming Privacy Policy easier to defend. Not all of these will get
 done — they're noted so the decision to skip any one of them is
 deliberate rather than accidental.
 
-- **Self-host the WOFF2 font files instead of loading from Google
-  Fonts.** Today `frontend/src/assets/tokens.css` imports Newsreader,
-  Inter Tight, and JetBrains Mono from `fonts.googleapis.com`. That
-  means Google sees every visitor's IP on every page load, which
-  contradicts the "we don't share data with Google beyond reCAPTCHA"
-  posture in the privacy policy. Fix is one afternoon of work:
-  download the WOFF2s, drop them under `frontend/public/fonts/`,
-  replace the `@import` with `@font-face` blocks pointing at the local
-  paths. SIL OFL allows redistribution; no attribution required beyond
-  the license file itself. Bonus: faster first paint, since the
-  browser stops doing a cross-origin DNS lookup + handshake for
-  fonts.googleapis.com on every cold visit.
-- **Replace Google reCAPTCHA v3 with Cloudflare Turnstile.** Today
-  registration sends a token derived from the user's browser
-  fingerprint + IP to Google. Turnstile is Cloudflare's equivalent
-  with a no-tracking design (no third-party cookies, no behavioral
-  fingerprinting marketed back to ads) and we already proxy through
-  Cloudflare anyway, so the subprocessor count actually drops by one.
-  Drop-in swap on the registration form + one env var on the backend.
 - **Hash the email in `account_deletions` instead of storing
   plaintext.** Audit table currently stores `email` + `deleted_at` so
   we can support re-registration limits and abuse investigation. A

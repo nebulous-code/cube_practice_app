@@ -14,7 +14,7 @@ import AuthShell from '@/components/auth/AuthShell.vue'
 import Field from '@/components/auth/Field.vue'
 import PasswordField from '@/components/auth/PasswordField.vue'
 import PrimaryCTA from '@/components/auth/PrimaryCTA.vue'
-import { executeRecaptcha } from '@/composables/useRecaptcha'
+import { executeTurnstile } from '@/composables/useTurnstile'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -46,12 +46,12 @@ async function onSubmit() {
   fieldErrors.value = {}
 
   try {
-    const token = await executeRecaptcha('register')
+    const token = await executeTurnstile('register')
     await auth.upgradeFromGuest({
       display_name: displayName.value.trim(),
       email: email.value.trim(),
       password: password.value,
-      recaptcha_token: token,
+      turnstile_token: token,
     })
     router.push('/verify-email')
   } catch (err) {

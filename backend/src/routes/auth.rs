@@ -64,10 +64,11 @@ pub struct RegisterRequest {
     display_name: String,
     email: String,
     password: String,
-    /// reCAPTCHA v3 token from the frontend. Empty string in dev / curl testing
-    /// is acceptable when `RECAPTCHA_SECRET_KEY` is unset on the backend.
+    /// Cloudflare Turnstile token from the frontend. Empty string in dev /
+    /// curl testing is acceptable when `TURNSTILE_SECRET_KEY` is unset on
+    /// the backend.
     #[serde(default)]
-    recaptcha_token: String,
+    turnstile_token: String,
     /// Optional guest-mode state to import. When present, validated and
     /// imported in the same transaction as user creation — see
     /// `docs/milestones/06_guest_mode.md` §4.
@@ -99,7 +100,7 @@ async fn register(
     let email = req.email.trim().to_lowercase();
 
     validate_register(&display_name, &email, &req.password)?;
-    state.recaptcha.verify(&req.recaptcha_token).await?;
+    state.turnstile.verify(&req.turnstile_token).await?;
 
     // Validate the guest blob (if any) up front so a malformed payload
     // never creates a user row in the first place.

@@ -33,9 +33,9 @@ pub enum AppError {
     #[error("email already in use")]
     EmailInUse,
 
-    /// Registration: reCAPTCHA token rejected (success=false or score below threshold).
+    /// Registration: captcha token rejected by the verifier.
     #[error("captcha verification failed")]
-    RecaptchaFailed,
+    CaptchaFailed,
 
     /// Verify-email / reset-password: code didn't match.
     #[error("invalid code")]
@@ -99,9 +99,9 @@ impl AppError {
                 "email_in_use",
                 "That email is already registered.".into(),
             ),
-            AppError::RecaptchaFailed => (
+            AppError::CaptchaFailed => (
                 StatusCode::FORBIDDEN,
-                "recaptcha_failed",
+                "captcha_failed",
                 "We couldn't verify the captcha. Try again.".into(),
             ),
             AppError::InvalidCode => (

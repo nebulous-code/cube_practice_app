@@ -49,7 +49,7 @@ export interface RegisterPayload {
   display_name: string
   email: string
   password: string
-  recaptcha_token: string
+  turnstile_token: string
 }
 
 export interface RegisterResponse {

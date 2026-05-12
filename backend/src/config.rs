@@ -8,8 +8,7 @@ pub struct Config {
     pub jwt_secret: String,
     pub resend_api_key: String,
     pub email_from: String,
-    pub recaptcha_secret_key: String,
-    pub recaptcha_min_score: f32,
+    pub turnstile_secret_key: String,
 }
 
 impl Config {
@@ -29,11 +28,7 @@ impl Config {
             resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
             email_from: env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "Quiet Cube <onboarding@resend.dev>".to_string()),
-            recaptcha_secret_key: env::var("RECAPTCHA_SECRET_KEY").unwrap_or_default(),
-            recaptcha_min_score: env::var("RECAPTCHA_MIN_SCORE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(0.5),
+            turnstile_secret_key: env::var("TURNSTILE_SECRET_KEY").unwrap_or_default(),
         })
     }
 }

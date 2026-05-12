@@ -63,8 +63,7 @@ We do not set any analytics, advertising, or tracking cookies.
 
 ### Cookies set by third parties on our behalf
 
-- **Cloudflare** may set bot-management and security cookies such as `__cf_bm` and `cf_clearance`. These are set by Cloudflare's edge, not by our application.
-- **Google reCAPTCHA** sets cookies on the registration page (see "Third-party services" below).
+- **Cloudflare** may set bot-management and security cookies such as `__cf_bm` and `cf_clearance`. These are set by Cloudflare's edge, not by our application. The same applies to the Turnstile widget on the registration page (see "Third-party services" below).
 
 ### Local storage
 
@@ -78,11 +77,10 @@ These services may process your data on our behalf:
 |---|---|---|
 | **Render** | Application hosting (US East) | All request traffic, including IPs |
 | **Neon** | PostgreSQL database (US East) | All data stored in the database |
-| **Cloudflare** | CDN and bot mitigation | Request metadata including IPs; may set its own cookies |
+| **Cloudflare** | CDN, bot mitigation, and Turnstile (registration form anti-bot) | Request metadata including IPs; may set its own cookies. For Turnstile: a token derived from your browser and IP, returned to us as pass/fail |
 | **Resend** | Transactional email delivery | Your email address and the contents of transactional emails (verification, password reset, etc.) |
-| **Google reCAPTCHA v3** | Bot detection on the registration form | A token derived from your browser and IP; Google returns a score we use to accept or reject the signup |
 
-reCAPTCHA is governed by [Google's Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms).
+Cloudflare Turnstile is governed by [Cloudflare's Privacy Policy](https://www.cloudflare.com/privacypolicy/).
 
 ## Where your data lives
 

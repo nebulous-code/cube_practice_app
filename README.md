@@ -55,7 +55,7 @@ tools/           test.sh and other dev/CI helpers
 
 ```
 cd backend
-cp .env.example .env  # fill in DATABASE_URL, JWT_SECRET, RESEND_*, RECAPTCHA_*
+cp .env.example .env  # fill in DATABASE_URL, JWT_SECRET, RESEND_*, TURNSTILE_SECRET_KEY
 cargo run             # debug profile, fast compile
 # or
 cargo run --release   # release profile — what Render runs in production
@@ -73,7 +73,7 @@ tools/test.sh             # backend coverage + frontend type-check + tests (mirr
 tools/test.sh --enforce   # also enforce the 95% coverage gate (CI does this)
 ```
 
-Tests need a separate `TEST_DATABASE_URL` so a misconfigured run can't accidentally drop production tables. See `backend/.env.example` for the full env-var list (DATABASE_URL, JWT_SECRET, ARGON2_*, RESEND_*, RECAPTCHA_*, TEST_DATABASE_URL).
+Tests need a separate `TEST_DATABASE_URL` so a misconfigured run can't accidentally drop production tables. See `backend/.env.example` for the full env-var list (DATABASE_URL, JWT_SECRET, ARGON2_*, RESEND_*, TURNSTILE_SECRET_KEY, TEST_DATABASE_URL).
 
 ### Render deployment
 

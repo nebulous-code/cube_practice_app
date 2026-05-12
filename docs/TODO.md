@@ -12,7 +12,7 @@ Things that need a human decision, content, design, or external action — items
     - speedsolving.com has the best universal case numbering.
 - [x] Update Case numbering
 - [x] Add Case Presentation Rotation
-- [ ] Update fonts to be stored and served locally.
+- [x] Update fonts to be stored and served locally.
 - [ ] Create a me@nebulouscode.com email address
 
 ## Cosmetic but visible to first-time users

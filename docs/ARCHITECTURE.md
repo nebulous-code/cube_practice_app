@@ -28,7 +28,7 @@ other puzzles can be added post-MVP without restructuring.
 ### MVP features (shipped)
 
 - Email/password registration with email verification (6-digit code) and
-  reCAPTCHA v3.
+  Cloudflare Turnstile.
 - Login / logout / forgot-password / reset-password / change-password.
 - Sign-out-everywhere with current-password gate.
 - Email change via `pending_email` (no typo lockout).
@@ -235,7 +235,8 @@ timezone is post-MVP.
 ## 5. Auth design
 
 All verification + reset flows use **6-digit numeric codes** entered into
-the app, not link-clicks. reCAPTCHA is v3 (invisible).
+the app, not link-clicks. Registration is protected by Cloudflare
+Turnstile (managed mode, usually invisible).
 
 Passwords hashed with **argon2id**. JWT signed **HS256** using
 `JWT_SECRET`, set as **httpOnly, Secure, SameSite=Strict, Path=/** cookie
@@ -244,8 +245,8 @@ clock.
 
 ### Registration → verify → app
 
-1. POST `/auth/register` (display_name, email, password, recaptcha_token)
-2. Backend verifies reCAPTCHA, hashes password (argon2id), inserts user
+1. POST `/auth/register` (display_name, email, password, turnstile_token)
+2. Backend verifies Turnstile, hashes password (argon2id), inserts user
    with `email_verified=false` + 6-digit `verification_code` (10-min TTL).
 3. Verification email sent via Resend.
 4. POST `/auth/verify-email` with the 6-digit code. On success the
@@ -387,7 +388,7 @@ only for MVP.
 | `/upgrade` | GuestUpgradeScreen | Any | Guest → real account, ships the localStorage blob to the backend |
 | `/settings` | SettingsView | Authed or guest | Profile, password, sessions, delete (authed); save-progress card (guest) |
 | `/login` | LoginView | Guest-only | Includes "Continue as guest" link + post-delete note via `?deleted=1` |
-| `/register` | RegisterView | Guest-only | reCAPTCHA + legal footer |
+| `/register` | RegisterView | Guest-only | Turnstile + legal footer |
 | `/verify-email` | VerifyEmailView | Either | Same view for initial verify + email-change verify |
 | `/forgot-password`, `/reset-password` | — | Guest-only | 6-digit code flow |
 | `/about`, `/terms`, `/privacy`, `/acknowledgements` | static | None | Placeholder copy until launch |
@@ -437,7 +438,7 @@ changes.
   UX safety net").
 - **Database** — Neon Postgres.
 - **Email** — Resend (3,000/mo permanent free tier; domain verified).
-- **reCAPTCHA** — Google v3.
+- **Captcha** — Cloudflare Turnstile (managed mode).
 
 ### Environment variables
 
@@ -446,8 +447,7 @@ Backend:
 DATABASE_URL          Neon connection string
 TEST_DATABASE_URL     local Postgres for integration tests; never points at prod
 JWT_SECRET            random 256-bit secret
-RECAPTCHA_SECRET_KEY  Google secret
-RECAPTCHA_MIN_SCORE   default 0.5
+TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret
 RESEND_API_KEY        Resend key
 EMAIL_FROM            verified sender
 FRONTEND_URL          CORS whitelist
@@ -458,7 +458,7 @@ RUST_LOG              log level
 Frontend:
 ```
 VITE_API_BASE_URL          Render backend URL
-VITE_RECAPTCHA_SITE_KEY    public reCAPTCHA key
+VITE_TURNSTILE_SITE_KEY    public Turnstile site key
 ```
 
 ### CI

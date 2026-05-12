@@ -80,8 +80,7 @@ import StaticPageView from './StaticPageView.vue'
 
     <h3>Cookies set by third parties on our behalf</h3>
     <ul>
-      <li><strong>Cloudflare</strong> may set bot-management and security cookies such as <code>__cf_bm</code> and <code>cf_clearance</code>. These are set by Cloudflare's edge, not by our application.</li>
-      <li><strong>Google reCAPTCHA</strong> sets cookies on the registration page (see "Third-party services" below).</li>
+      <li><strong>Cloudflare</strong> may set bot-management and security cookies such as <code>__cf_bm</code> and <code>cf_clearance</code>. These are set by Cloudflare's edge, not by our application. The same applies to the Turnstile widget on the registration page (see "Third-party services" below).</li>
     </ul>
 
     <h3>Local storage</h3>
@@ -115,24 +114,19 @@ import StaticPageView from './StaticPageView.vue'
           </tr>
           <tr>
             <td><strong>Cloudflare</strong></td>
-            <td>CDN and bot mitigation</td>
-            <td>Request metadata including IPs; may set its own cookies</td>
+            <td>CDN, bot mitigation, and Turnstile (registration form anti-bot)</td>
+            <td>Request metadata including IPs; may set its own cookies. For Turnstile: a token derived from your browser and IP, returned to us as pass/fail</td>
           </tr>
           <tr>
             <td><strong>Resend</strong></td>
             <td>Transactional email delivery</td>
             <td>Your email address and the contents of transactional emails (verification, password reset, etc.)</td>
           </tr>
-          <tr>
-            <td><strong>Google reCAPTCHA v3</strong></td>
-            <td>Bot detection on the registration form</td>
-            <td>A token derived from your browser and IP; Google returns a score we use to accept or reject the signup</td>
-          </tr>
         </tbody>
       </table>
     </div>
     <p>
-      reCAPTCHA is governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>.
+      Cloudflare Turnstile is governed by <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare's Privacy Policy</a>.
     </p>
 
     <h2>Where your data lives</h2>

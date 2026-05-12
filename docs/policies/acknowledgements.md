@@ -29,7 +29,7 @@ Quiet Cube uses three typefaces, all licensed under the [SIL Open Font License 1
 
 ## Anti-bot protection
 
-This site is protected by reCAPTCHA and the Google [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms) apply.
+The registration form is protected by [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/). Cloudflare's [Privacy Policy](https://www.cloudflare.com/privacypolicy/) applies to what it processes.
 
 ## Open-source dependencies
 
