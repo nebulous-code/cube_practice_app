@@ -9,6 +9,7 @@ Things that need a human decision, content, design, or external action — items
 - [ ] **Terms of Service content.** Static page at `/terms` ships with placeholder text. Linked from the registration legal footer and Settings → About.
 - [ ] **Privacy Policy content.** Static page at `/privacy` ships with placeholder text. Same link surfaces as Terms.
 - [ ] **OLL case numbering universality.** Confirm the 1–57 numbering used in `data.jsx` (and seeded into `cases.case_number`) matches the cubing-community convention. ~30-min check; renumbering after launch breaks any URL or progress data already keyed on case number.
+- [ ] Update fonts to be stored and served locally.
 
 ## Cosmetic but visible to first-time users
 

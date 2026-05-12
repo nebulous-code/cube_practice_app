@@ -21,27 +21,11 @@ A web-based spaced repetition flashcard app for Rubik's cube algorithm practice.
 - Guest mode (last MVP feature shipped — see `docs/guest_mode_design_doc.md`)
 
 ### Post-MVP
-- PLL, F2L, and other solve stage expansion
-- Other cube types (4x4, Megaminx, etc.)
-- Stats over time and progress graphs (a placeholder/skeleton view ships in MVP so users know it's coming)
-- Admin panel
-- Public case browser (no login required)
-- Dark mode
-- Additional public-facing marketing pages (features, pricing, FAQ, etc.) beyond the M5 landing page
-- Full accessibility audit — screen-reader walkthrough, ARIA live regions, complete WCAG AA review (M5 ships a basic pass: keyboard nav, focus rings, form labels, spot-check contrast)
-- **Per-user timezone + local-midnight rollover** for streak/due-date comparisons. MVP uses server UTC date for "today" — a user in PST sees streaks tick at 5 PM Pacific (00:00 UTC). Post-MVP: store `users.timezone`, roll over at user-local midnight. Two reviews near UTC midnight currently can fall on different "today" values; that goes away with per-user rollover.
-- **"Download my data" / data export before account deletion.** Deferred from M7 (`docs/milestones/07_delete_account.md`). MVP delete is straight hard-delete; a JSON dump endpoint + Settings-side download flow can layer in once explicit user demand surfaces.
-- **Guest mode "Discard guest data" Settings entry.** Deferred from M7. Trivially `clearGuestState()`, but the UX (confirmation pane, warning copy) deserves its own design pass — the existing M7 deletion flow is account-scoped and doesn't apply.
-- **Free-study filters: disable chips with no remaining matches.** Today, picking "L" as the primary shape leaves every tag chip enabled even though tags like "knight_move" don't intersect with L cases — the user discovers this only by hitting "0 cases match". Post-MVP: gray out / hide chips whose addition would leave the result set empty given the current filter state. Same treatment for tags/state interactions.
-- **Email reminders.** Opt-in daily/weekly nudge when the user has cards due. Needs a `users.reminder_preference` enum (off / daily / weekly), a per-user "last reminder sent" timestamp, and a worker pass that runs on a schedule. Resend integration already in place from M1 — wiring is the easy part; the design call is cadence, copy, and unsubscribe-link semantics.
-- **Paid email subscription / premium tier.** Possible monetization path. Would need: subscription state on `users`, a billing provider (Stripe likely), gated features (TBD — possibly stats over time, additional puzzle types, or dark mode), and a customer-portal flow for plan changes / cancellations. Discovery work; not committed.
-- **Easier-to-copy verification / reset codes in email.** Today the 6-digit code sits inside an HTML paragraph; on mobile the user has to long-press and trim whitespace. Wrap the code in a `<code>`/monospace box with generous padding so a single tap selects the whole code, or include a Markdown-style fenced block in the plaintext email body. Trivial template change once the design lands.
-- **Avatar** Allow the users to pick an OLL case as their avatar in the style of the logo.
-- **HTTP integration tests for route handlers.** Today we unit-test the lib functions each handler delegates to (high coverage on the business logic) but not the HTTP plumbing — auth gating, request validation, JSON response shape, status codes, cookie attachment. The handler-layer files (`routes/*`, `auth/extractor.rs`, `auth/session.rs`, `error.rs`'s `IntoResponse`) are excluded from the 90% coverage gate for that reason. Adding tower-based in-process integration tests (spin up the Axum app, send real `Request`s via `tower::ServiceExt::oneshot`, assert responses) would close the gap. Cost: ~30–50% more test code, slower CI; benefit: catches handler-level regressions (renamed JSON fields, dropped auth gates, wrong status codes) that lib-level tests can't see. Worth doing once the project has more than one developer, or on the first regression that the lib tests miss.
-- **Cold-start UX safety net.** Render free tier spins down after ~15 min idle; the next request stalls 20–60s while the dyno wakes. The splash screen handles the boot case (M-add'l), but in-session API calls (grade, reveal, etc.) currently look frozen. Two layered ideas:
-  1. **Top progress bar (NProgress-style).** ~2px bar at the top of the viewport, animates while any axios request is in flight. Axios interceptors increment/decrement a counter; bar component watches it. Calibrated so it's invisible on a 200ms request and visibly creeps on a 30s one. Zero visual cost on fast requests, immediate signal on slow ones.
-  2. **Subtle full-screen overlay after ~8 seconds.** When a request has been in flight that long, fade in a 30–50% black overlay with a small note: "still working — the server takes up to a minute to wake up after a quiet period." Dismisses on response. Threshold tuned to fire effectively only on cold-start, not on slow mobile networks.
-  Either of these makes the spin-down tolerable. The "real fix" is a paid Render tier (~$5/mo) once the project has any monetization or donation path.
+
+Originally an inline list (PLL/F2L expansion, other puzzle types, stats
+over time, admin panel, dark mode, accessibility audit, etc.). Lifted
+out to a top-level live doc once MVP shipped — see
+[`docs/POST_MVP.md`](../POST_MVP.md) for the current backlog.
 
 ### Out of Scope (MVP)
 - Native mobile app
