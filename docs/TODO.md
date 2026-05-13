@@ -13,7 +13,7 @@ Things that need a human decision, content, design, or external action — items
 - [x] Update Case numbering
 - [x] Add Case Presentation Rotation
 - [x] Update fonts to be stored and served locally.
-- [ ] Create a me@nebulouscode.com email address
+- [x] Create a me@nebulouscode.com email address
 
 ## Cosmetic but visible to first-time users
 
@@ -28,7 +28,7 @@ Things that need a human decision, content, design, or external action — items
 
 ## Known bugs
 
-- [ ] **Streak shows non-zero after delete + re-register with same email.** Spotted during M7 dogfooding. Backend tests confirm fresh row gets `streak_count=0`; suspected to be a frontend stale-store issue along an as-yet-unidentified path. To investigate.
+- [x] **Streak shows non-zero after delete + re-register with same email.** Spotted during M7 dogfooding. Backend tests confirm fresh row gets `streak_count=0`; suspected to be a frontend stale-store issue along an as-yet-unidentified path. To investigate.
 
 ## Release Tasks
 
