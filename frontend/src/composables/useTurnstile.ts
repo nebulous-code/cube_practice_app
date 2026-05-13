@@ -20,7 +20,6 @@ interface TurnstileRenderOptions {
 declare global {
   interface Window {
     turnstile?: {
-      ready: (cb: () => void) => void
       render: (
         container: HTMLElement | string,
         opts: TurnstileRenderOptions,
@@ -78,28 +77,28 @@ export async function executeTurnstile(action: string): Promise<string> {
       container.remove()
     }
 
-    window.turnstile!.ready(() => {
-      widgetId = window.turnstile!.render(container, {
-        sitekey: SITE_KEY,
-        action,
-        appearance: 'interaction-only',
-        callback: (token: string) => {
-          cleanup()
-          resolve(token)
-        },
-        'error-callback': () => {
-          cleanup()
-          resolve('')
-        },
-        'timeout-callback': () => {
-          cleanup()
-          resolve('')
-        },
-      })
-      if (!widgetId) {
+    // Script is already loaded (we awaited onload above), so render directly.
+    // ready() is forbidden when the script tag has async/defer attributes.
+    widgetId = window.turnstile!.render(container, {
+      sitekey: SITE_KEY,
+      action,
+      appearance: 'interaction-only',
+      callback: (token: string) => {
+        cleanup()
+        resolve(token)
+      },
+      'error-callback': () => {
         cleanup()
         resolve('')
-      }
+      },
+      'timeout-callback': () => {
+        cleanup()
+        resolve('')
+      },
     })
+    if (!widgetId) {
+      cleanup()
+      resolve('')
+    }
   })
 }
