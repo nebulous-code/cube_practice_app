@@ -9,11 +9,13 @@ mod common;
 
 use chrono::{DateTime, Utc};
 use common::TestDb;
-use cube_backend::account_delete;
+use cube_backend::account_delete::{self, hash_email};
 use cube_backend::auth::password::{hash_password, Argon2Config};
 use cube_backend::error::AppError;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+const TEST_HMAC_SECRET: &[u8] = b"test-hmac-secret-stable-across-tests";
 
 fn fast_config() -> Argon2Config {
     Argon2Config {
@@ -46,14 +48,14 @@ async fn user_exists(pool: &PgPool, user_id: Uuid) -> bool {
     row.0 == 1
 }
 
-async fn audit_emails(pool: &PgPool) -> Vec<String> {
+async fn audit_email_hashes(pool: &PgPool) -> Vec<String> {
     let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT email FROM account_deletions ORDER BY id ASC",
+        "SELECT email_hash FROM account_deletions ORDER BY id ASC",
     )
     .fetch_all(pool)
     .await
     .expect("query audit");
-    rows.into_iter().map(|(e,)| e).collect()
+    rows.into_iter().map(|(h,)| h).collect()
 }
 
 #[tokio::test]
@@ -61,12 +63,15 @@ async fn happy_path_deletes_user_and_writes_audit_row() {
     let db = TestDb::new().await;
     let user = seed_user(&db.pool, "alice@example.com", "correct-horse").await;
 
-    account_delete::delete_account(&db.pool, user, "correct-horse")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, user, "correct-horse")
         .await
         .expect("delete");
 
     assert!(!user_exists(&db.pool, user).await);
-    assert_eq!(audit_emails(&db.pool).await, vec!["alice@example.com"]);
+    assert_eq!(
+        audit_email_hashes(&db.pool).await,
+        vec![hash_email(TEST_HMAC_SECRET, "alice@example.com")]
+    );
 }
 
 #[tokio::test]
@@ -75,7 +80,7 @@ async fn audit_row_carries_a_timestamp_close_to_now() {
     let user = seed_user(&db.pool, "alice@example.com", "correct-horse").await;
     let before = Utc::now();
 
-    account_delete::delete_account(&db.pool, user, "correct-horse")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, user, "correct-horse")
         .await
         .expect("delete");
 
@@ -93,13 +98,14 @@ async fn wrong_password_rejects_and_leaves_state_intact() {
     let db = TestDb::new().await;
     let user = seed_user(&db.pool, "alice@example.com", "correct-horse").await;
 
-    let err = account_delete::delete_account(&db.pool, user, "wrong-password")
-        .await
-        .expect_err("should reject");
+    let err =
+        account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, user, "wrong-password")
+            .await
+            .expect_err("should reject");
 
     assert!(matches!(err, AppError::InvalidPassword));
     assert!(user_exists(&db.pool, user).await);
-    assert!(audit_emails(&db.pool).await.is_empty());
+    assert!(audit_email_hashes(&db.pool).await.is_empty());
 }
 
 #[tokio::test]
@@ -108,13 +114,16 @@ async fn cross_user_isolation() {
     let alice = seed_user(&db.pool, "alice@example.com", "alice-pw").await;
     let bob = seed_user(&db.pool, "bob@example.com", "bob-pw").await;
 
-    account_delete::delete_account(&db.pool, alice, "alice-pw")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, alice, "alice-pw")
         .await
         .expect("delete alice");
 
     assert!(!user_exists(&db.pool, alice).await);
     assert!(user_exists(&db.pool, bob).await);
-    assert_eq!(audit_emails(&db.pool).await, vec!["alice@example.com"]);
+    assert_eq!(
+        audit_email_hashes(&db.pool).await,
+        vec![hash_email(TEST_HMAC_SECRET, "alice@example.com")]
+    );
 }
 
 #[tokio::test]
@@ -159,7 +168,7 @@ async fn cascade_removes_sessions_and_progress() {
     .await
     .expect("seed progress");
 
-    account_delete::delete_account(&db.pool, user, "pw")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, user, "pw")
         .await
         .expect("delete");
 
@@ -191,9 +200,10 @@ async fn cascade_removes_sessions_and_progress() {
 async fn unknown_user_returns_unauthorized() {
     let db = TestDb::new().await;
 
-    let err = account_delete::delete_account(&db.pool, Uuid::new_v4(), "anything")
-        .await
-        .expect_err("should reject");
+    let err =
+        account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, Uuid::new_v4(), "anything")
+            .await
+            .expect_err("should reject");
     assert!(matches!(err, AppError::Unauthorized));
 }
 
@@ -211,7 +221,7 @@ async fn re_register_after_delete_starts_with_fresh_streak() {
     .await
     .expect("seed streak");
 
-    account_delete::delete_account(&db.pool, first, "pw1")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, first, "pw1")
         .await
         .expect("delete");
 
@@ -234,17 +244,37 @@ async fn re_register_after_delete_starts_with_fresh_streak() {
 async fn re_register_then_delete_creates_separate_audit_rows() {
     let db = TestDb::new().await;
     let first = seed_user(&db.pool, "alice@example.com", "pw1").await;
-    account_delete::delete_account(&db.pool, first, "pw1")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, first, "pw1")
         .await
         .expect("first delete");
 
     let second = seed_user(&db.pool, "alice@example.com", "pw2").await;
-    account_delete::delete_account(&db.pool, second, "pw2")
+    account_delete::delete_account(&db.pool, TEST_HMAC_SECRET, second, "pw2")
         .await
         .expect("second delete");
 
+    // Two deletions of the same email yield two identical hashes — the table
+    // intentionally allows duplicates so the audit trail captures every event.
+    let expected = hash_email(TEST_HMAC_SECRET, "alice@example.com");
     assert_eq!(
-        audit_emails(&db.pool).await,
-        vec!["alice@example.com".to_string(), "alice@example.com".to_string()]
+        audit_email_hashes(&db.pool).await,
+        vec![expected.clone(), expected]
     );
+}
+
+#[tokio::test]
+async fn hash_is_deterministic_and_secret_dependent() {
+    // Sanity check on the hash itself: same secret + same email → same hash;
+    // different secret → different hash. This is the property the privacy
+    // policy and any future re-registration check both depend on.
+    let h1 = hash_email(TEST_HMAC_SECRET, "alice@example.com");
+    let h2 = hash_email(TEST_HMAC_SECRET, "alice@example.com");
+    let h3 = hash_email(b"different-secret", "alice@example.com");
+    let h4 = hash_email(TEST_HMAC_SECRET, "bob@example.com");
+
+    assert_eq!(h1, h2);
+    assert_ne!(h1, h3);
+    assert_ne!(h1, h4);
+    // 32-byte SHA256 output, hex-encoded.
+    assert_eq!(h1.len(), 64);
 }

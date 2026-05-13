@@ -34,7 +34,9 @@ When you log in, we create a server-side session row containing a hashed session
 
 ### Account deletion records
 
-When you delete your account, we keep one row in an `account_deletions` table containing your original email address and the deletion timestamp. We use this to investigate abuse and to enforce re-registration limits. Everything else tied to your account is purged immediately.
+When you delete your account, we keep one row in an `account_deletions` table containing an **HMAC-SHA256 hash** of your original email address and the deletion timestamp. The plaintext email is not stored. We use this to investigate abuse and to enforce re-registration limits. Everything else tied to your account is purged immediately.
+
+Because the hash is a one-way function keyed with a server secret, the original email cannot be recovered from this row — even by us. We can only check whether a specific email matches the row by hashing it again with the same secret.
 
 If you want this row removed too, email us and we'll handle it case by case.
 

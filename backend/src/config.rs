@@ -9,6 +9,7 @@ pub struct Config {
     pub resend_api_key: String,
     pub email_from: String,
     pub turnstile_secret_key: String,
+    pub account_deletion_hmac_secret: String,
 }
 
 impl Config {
@@ -17,6 +18,17 @@ impl Config {
             .unwrap_or_else(|_| "dev-only-jwt-secret-do-not-use-in-prod".to_string());
         if jwt_secret.len() < 32 {
             tracing::warn!("JWT_SECRET is shorter than 32 chars — fine for dev, replace in prod");
+        }
+
+        // HMAC secret for hashing deleted-account emails. Must be stable forever:
+        // rotating it makes existing audit rows unverifiable. Plaintext fallback
+        // is fine for dev; prod must set a real value.
+        let account_deletion_hmac_secret = env::var("ACCOUNT_DELETION_HMAC_SECRET")
+            .unwrap_or_else(|_| "dev-only-account-deletion-hmac-secret".to_string());
+        if account_deletion_hmac_secret.len() < 32 {
+            tracing::warn!(
+                "ACCOUNT_DELETION_HMAC_SECRET is shorter than 32 chars — fine for dev, replace in prod"
+            );
         }
 
         Ok(Self {
@@ -29,6 +41,7 @@ impl Config {
             email_from: env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "Quiet Cube <onboarding@resend.dev>".to_string()),
             turnstile_secret_key: env::var("TURNSTILE_SECRET_KEY").unwrap_or_default(),
+            account_deletion_hmac_secret,
         })
     }
 }

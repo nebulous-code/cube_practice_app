@@ -624,7 +624,13 @@ async fn delete_account(
         DELETE_PER_USER,
     )?;
 
-    account_delete::delete_account(&state.pool, user.user_id, &req.current_password).await?;
+    account_delete::delete_account(
+        &state.pool,
+        state.config.account_deletion_hmac_secret.as_bytes(),
+        user.user_id,
+        &req.current_password,
+    )
+    .await?;
 
     tracing::info!(user_id = %user.user_id, "account deleted");
 
