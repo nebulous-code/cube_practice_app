@@ -110,9 +110,9 @@ Dev is your primary testing environment, so prod gets its own DB. This keeps sch
 
 ### 4d. Add custom domains
 
-- [x] In Render → new backend service → Custom Domains: add `api.quiet-cube.com`. Note the CNAME target Render gives you.
-- [x] In Render → new frontend service → Custom Domains: add `quiet-cube.com`. Note the CNAME/ALIAS target Render gives you.
-- [x] (Optional) also add `www.quiet-cube.com` to the frontend if you want it to resolve too.
+- [ ] In Render → new backend service → Custom Domains: add `api.quiet-cube.com`. Note the CNAME target Render gives you.
+- [ ] In Render → new frontend service → Custom Domains: add `quiet-cube.com`. Note the CNAME/ALIAS target Render gives you.
+- [ ] (Optional) also add `www.quiet-cube.com` to the frontend if you want it to resolve too.
 
 ---
 
@@ -142,16 +142,16 @@ Both `FRONTEND_URL` and `VITE_API_BASE_URL` were set at service-creation time in
 
 Run the whole register-to-practice flow against the live site. **Use a real email you control** — Resend will only deliver if the domain is verified, which is `mail.nebulouscode.com` (already set up).
 
-- [ ] Open `https://quiet-cube.com` in incognito. Landing page renders.
-- [ ] Click "Create an account". `/register` loads.
-- [ ] Register with a fresh email + 8-char password. Confirm Turnstile doesn't block.
-- [ ] Verification email arrives within a minute.
-- [ ] Enter the 6-digit code. Verify succeeds, lands on `/welcome` then `/practice`.
-- [ ] Solve a couple of cards. Streak appears on `/progress`.
-- [ ] Sign out → sign back in. Streak preserved.
-- [ ] Open `/settings` → "Delete account" → confirm. Account deletion succeeds.
-- [ ] Re-register with the **same email** that was just deleted. Streak shows 0 — confirms the [streak-non-zero-after-delete bug](TODO.md) is closed.
-- [ ] Delete the test account again for cleanup.
+- [x] Open `https://quiet-cube.com` in incognito. Landing page renders.
+- [x] Click "Create an account". `/register` loads.
+- [x] Register with a fresh email + 8-char password. Confirm Turnstile doesn't block.
+- [x] Verification email arrives within a minute.
+- [x] Enter the 6-digit code. Verify succeeds, lands on `/welcome` then `/practice`.
+- [x] Solve a couple of cards. Streak appears on `/progress`.
+- [x] Sign out → sign back in. Streak preserved.
+- [x] Open `/settings` → "Delete account" → confirm. Account deletion succeeds.
+- [x] Re-register with the **same email** that was just deleted. Streak shows 0 — confirms the [streak-non-zero-after-delete bug](TODO.md) is closed.
+- [x] Delete the test account again for cleanup.
 
 ---
 
@@ -167,19 +167,19 @@ Run the whole register-to-practice flow against the live site. **Use a real emai
 
 The custom domains were already removed back in Phase 1.5. Remaining cleanup:
 
-- [ ] Update dev frontend env var: `VITE_API_BASE_URL` → the dev backend's bare `*.onrender.com` URL. Trigger a rebuild.
-- [ ] In Cloudflare Turnstile, remove `cube.nebulouscode.com` from the hostnames list (keep `localhost` for local dev).
-- [ ] Confirm dev frontend on bare onrender.com loads. Auth won't fully work cross-site (cookies won't carry), but that's the cost of the dev cleanup — you noted in `TODO.md` you'd hit onrender.com manually for dev.
+- [x] Update dev frontend env var: `VITE_API_BASE_URL` → the dev backend's bare `*.onrender.com` URL. Trigger a rebuild.
+- [x] In Cloudflare Turnstile, remove `cube.nebulouscode.com` from the hostnames list (keep `localhost` for local dev).
+- [x] Confirm dev frontend on bare onrender.com loads. Auth won't fully work cross-site (cookies won't carry), but that's the cost of the dev cleanup — you noted in `TODO.md` you'd hit onrender.com manually for dev.
 
 ---
 
 ## Phase 10 — Close out
 
-- [ ] `docs/TODO.md`: check off "Render Main Branch" (line 35) and "Remove API URL Redirect" (line 27 — note: not done literally; we *kept* the redirect for cookie reasons and accepted the $0.25/mo cost. Either check it off with a note, or delete it).
-- [ ] `docs/TODO.md`: check off "Dev Render Environment" (line 39).
+- [x] `docs/TODO.md`: check off "Render Main Branch" (line 35) and "Remove API URL Redirect" (line 27 — note: not done literally; we *kept* the redirect for cookie reasons and accepted the $0.25/mo cost. Either check it off with a note, or delete it).
+- [x] `docs/TODO.md`: check off "Dev Render Environment" (line 39).
 - [ ] `docs/CHANGELOG.md`: add an entry for the launch under `quiet-cube.com`.
-- [ ] Tag the launch commit: `git tag -a v1.0 -m "Public launch on quiet-cube.com" && git push origin v1.0`.
-- [ ] Tell someone.
+- [x] Tag the launch commit: `git tag -a v1.0 -m "Public launch on quiet-cube.com" && git push origin v1.0`.
+- [x] Tell someone.
 
 ---
 
@@ -187,9 +187,9 @@ The custom domains were already removed back in Phase 1.5. Remaining cleanup:
 
 If the cutover breaks and you can't fix forward:
 
-- [ ] At the registrar, remove the `quiet-cube.com` / `api.quiet-cube.com` DNS records (or point them back to `cube.nebulouscode.com` / `api.cube.nebulouscode.com` if the dev services are still alive).
-- [ ] In Render, switch the services back to deploying `dev`.
-- [ ] In Render, restore `cube.nebulouscode.com` + `api.cube.nebulouscode.com` as custom domains on the dev services.
-- [ ] Wait for DNS / cert propagation. Old hostname comes back to life within a few minutes.
+- [x] At the registrar, remove the `quiet-cube.com` / `api.quiet-cube.com` DNS records (or point them back to `cube.nebulouscode.com` / `api.cube.nebulouscode.com` if the dev services are still alive).
+- [x] In Render, switch the services back to deploying `dev`.
+- [x] In Render, restore `cube.nebulouscode.com` + `api.cube.nebulouscode.com` as custom domains on the dev services.
+- [x] Wait for DNS / cert propagation. Old hostname comes back to life within a few minutes.
 
 The new hostnames are clean adds; there's nothing destructive in the cutover (no DB migrations, no deletions). Worst case is downtime, not data loss.

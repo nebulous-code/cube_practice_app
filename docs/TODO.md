@@ -31,11 +31,11 @@ Things that need a human decision, content, design, or external action — items
 
 ## Release Tasks
 
-- [ ] **Render Main Branch** Need to merge dev into main and then setup a main branch deployment on render. This is what cube.nebulouscode.com should point to long term.
+- [x] **Render Main Branch** Need to merge dev into main and then setup a main branch deployment on render. This is what cube.nebulouscode.com should point to long term.
 
 ## Post Release Cleanup
 
-- [ ] **Dev Render Environement** dev doesn't need a custom url I'll hit onrender.com manually for dev long term
+- [x] **Dev Render Environement** dev doesn't need a custom url I'll hit onrender.com manually for dev long term
 
 ---
 
