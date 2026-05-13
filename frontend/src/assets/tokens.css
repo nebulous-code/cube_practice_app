@@ -1,0 +1,158 @@
+/*
+ * Design tokens — paper aesthetic, ported from initial_design/src/ui.jsx.
+ * Reference these custom properties everywhere; avoid hard-coding palette/font values.
+ */
+
+/* Self-hosted fonts — see docs/concepts/font_migration.md. */
+
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/newsreader-v26-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/newsreader-v26-latin-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/newsreader-v26-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/newsreader-v26-latin-500italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter-tight-v9-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/inter-tight-v9-latin-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/inter-tight-v9-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-500.woff2') format('woff2');
+}
+
+:root {
+  /* Paper palette */
+  --paper-bg: #F4EFE3;
+  --paper-bg-alt: #EDE6D4;
+  --paper-card: #FBF7ED;
+  --paper-ink: #1F1B16;
+  --paper-ink-muted: #6E6455;
+  --paper-ink-faint: #9C907C;
+  --paper-rule: #D9CEB7;
+  --paper-rule-faint: #E5DCC8;
+  --paper-accent: #8C5A2B;
+  --paper-accent-bg: #E8DCC4;
+  --paper-yellow: #E9B949;
+  --paper-error: #B84A3F;
+
+  /* Type stacks */
+  --font-serif: 'Newsreader', 'Georgia', serif;
+  --font-sans: 'Inter Tight', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--paper-bg);
+  color: var(--paper-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+}
+
+/*
+ * Focus rings — keyboard-only via `:focus-visible` so mouse clicks on
+ * buttons don't paint a halo. Tuned to the paper palette: a warm-accent
+ * outline with a soft offset so it shows on top of paper-card and
+ * dark-ink surfaces alike.
+ */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--paper-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--paper-accent);
+  outline-offset: 2px;
+}

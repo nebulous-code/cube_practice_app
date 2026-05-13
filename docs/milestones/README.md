@@ -9,7 +9,7 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 1. **Auth first.** Account flows are the riskiest non-app concern — email deliverability, JWT cookies, reCAPTCHA, argon2 hashing, the Resend integration, the Neon connection. Getting them working early on a real deployed instance means everything else is built on a known-good foundation. It also forces the "is the deploy pipeline working?" question to be answered up front.
 2. **Data before behavior.** All 57 cases ship and render before any review/scheduling logic lands. Confidence the case data is right and the diagrams render is a prerequisite for trusting the SM-2 numbers later.
 3. **Core loop before periphery.** Study mode + grading + scheduling lands before the dashboard, free study, tags, and stats. The latter are mostly views over data the core loop produces.
-4. **Guest mode last.** Per `OLL_App_Design_Doc.md` §1 and `guest_mode_design_doc.md`, guest mode is the final MVP feature, layered on top of the authenticated path.
+4. **Guest mode last.** Per `Cube_Practice_Design_Doc.md` §1 and `guest_mode_design_doc.md`, guest mode is the final MVP feature, layered on top of the authenticated path.
 
 ---
 
@@ -62,7 +62,7 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 **Goal:** The meat and potatoes — a user can study due cards, grade them, and have the Anki-variant SM-2 schedule update correctly. Streak ticks.
 
 **Done when:**
-- Reviewing a card runs SM-2 (per `OLL_App_Design_Doc.md` §4) → `due_date` updates → streak updates per the day-rollover rule
+- Reviewing a card runs SM-2 (per `Cube_Practice_Design_Doc.md` §4) → `due_date` updates → streak updates per the day-rollover rule
 - Practice tab pulls due cards and runs the full study session (pattern → reveal algorithm → 4-button grade → next)
 - Failing a card resets `repetitions` and `interval_days` correctly; Hard/Easy modify ease per the constants table
 - Cards transition through `not_started` → `learning` → `due` → `mastered` per the §1.3 thresholds
@@ -83,13 +83,13 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 **Done when:**
 - Dashboard shows streak, due-today, learning/mastered counts, quick-start CTA
 - `/progress` shows the per-case breakdown with state filters (`not_started` / `learning` / `due` / `mastered`)
-- Free study mode runs with all four filter axes (Tier 1, Tier 2, user tag, status)
-- User-defined tags: create / delete / apply / remove, all from the case-detail screen
+- Free study mode runs with the filter axes (primary shape, tags, status)
+- **Tag rework:** the single-string `tier2_tag` collapses into a multi-valued `tags TEXT[]` on `cases` and `user_case_settings`. Tags are user-overridable, free-form, normalized (lowercase + trim + dedupe) on write. Detail view input is comma-separated; cases browser switches from grouped-by-Tier-2 to a flat list with chip filtering by any-of selected tags. The originally-planned `tags` + `case_tags` junction tables are dropped in favor of the array column — one mechanism, one place.
 - "Stats over time" skeleton renders a "coming soon" panel on `/progress`
 
-**Backend:** `GET /progress` (with the stats fields per item E of the auth decisions doc), `GET /progress/cases`, `GET /study/free`, full `/tags` and `/cases/:id/tags` CRUD.
+**Backend:** `GET /progress` (with the stats fields per item E of the auth decisions doc), `GET /progress/cases`, `GET /study/free`, schema migration converting `tier2_tag TEXT` → `tags TEXT[]` (backfill the single value as a one-element array), update merge SQL + `update_settings` to handle arrays.
 
-**Frontend:** Dashboard, Progress view, Free Study view + filter UI, Tags UI on case detail, stats skeleton.
+**Frontend:** Dashboard, Progress view, Free Study view + filter UI, tag input/chip rendering on case detail, browser tag filter, stats skeleton.
 
 **Out of scope:** Static pages, guest mode, polish/empty states.
 
@@ -131,6 +131,25 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 
 ---
 
+## Milestone 7 — Delete Account
+
+**Goal:** Authenticated user can permanently delete their account and all associated data. Required pre-launch for legal compliance (GDPR Article 17, CCPA right-to-delete) and standard web-app expectation.
+
+**Done when:**
+- `DELETE /auth/me` endpoint, password-gated; deletes the `users` row and lets the existing `ON DELETE CASCADE` foreign keys clean up sessions / settings / progress
+- SettingsView shows a "Delete account" card (authed users only) with a two-step confirm pane mirroring the existing "Sign out everywhere" pattern
+- Post-delete: local state cleared, browser routes to `/login?deleted=1`, a one-line "Account deleted." note shows on the login screen
+- Cascade-audit test guards against future migrations silently dropping the cleanup behavior
+- Manual QA on real iOS Safari + Android Chrome
+
+**Backend:** `DELETE /auth/me` route in `routes/auth.rs`, per-user rate-limit key, schema-introspection cascade test.
+
+**Frontend:** `auth.deleteAccount()` action, SettingsView delete card, LoginView post-delete note.
+
+**Out of scope:** Soft delete / 30-day recovery window. Data export ("Download my data") before deletion. Email confirmation (password gate is sufficient). Audit log table. A "Discard guest data" Settings entry for guest mode (separate ticket).
+
+---
+
 ## Parallelization opportunities
 
 The milestones above are listed in the natural completion order, but some work can run in parallel without breaking the "always green" rule:
@@ -148,10 +167,10 @@ Things that should *not* be parallelized:
 
 ## Deployment posture
 
-Render + Neon + Resend are live from M1 onward. Each milestone's "done when" is verified against the deployed environment, not a local-only build. CI deploys on green main per `OLL_App_Design_Doc.md` §10. No big-bang launch — by the end of M6 the deployed app *is* the MVP.
+Render + Neon + Resend are live from M1 onward. Each milestone's "done when" is verified against the deployed environment, not a local-only build. CI deploys on green main per `Cube_Practice_Design_Doc.md` §10. No big-bang launch — by the end of M6 the deployed app *is* the MVP.
 
 ---
 
 ## After M6
 
-Out of scope for this document. The post-MVP list in `OLL_App_Design_Doc.md` §1 (PLL/F2L, stats over time, admin panel, public case browser, dark mode) is the source of truth for what comes next.
+Out of scope for this document. The post-MVP list in `Cube_Practice_Design_Doc.md` §1 (PLL/F2L, stats over time, admin panel, public case browser, dark mode) is the source of truth for what comes next.

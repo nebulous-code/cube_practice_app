@@ -45,7 +45,7 @@ Frontend is a separate Render static site; backend is a Render web service. Cook
 
 ## 3. Schema — M1 subset
 
-Only the tables auth touches. Reproduced from `OLL_App_Design_Doc.md` §3 for convenience; that doc remains the source of truth.
+Only the tables auth touches. Reproduced from `Cube_Practice_Design_Doc.md` §3 for convenience; that doc remains the source of truth.
 
 ### `users`
 ```
@@ -83,7 +83,7 @@ Index on `(user_id, revoked)` for fast sign-out-all and on `token_hash` for the 
 
 ## 4. API surface
 
-All endpoints are `POST` unless noted. Prefix `/api/v1`. Request and response bodies are JSON. Cookie-bearing endpoints set/clear `Set-Cookie: oll_session=…; HttpOnly; Secure; SameSite=Strict; Path=/`. JWT is HS256 signed with `JWT_SECRET`, 30-day expiry, claims `{ sub, sid, exp, iat }` where `sid` is the `sessions.id`.
+All endpoints are `POST` unless noted. Prefix `/api/v1`. Request and response bodies are JSON. Cookie-bearing endpoints set/clear `Set-Cookie: cube_session=…; HttpOnly; Secure; SameSite=Strict; Path=/`. JWT is HS256 signed with `JWT_SECRET`, 30-day expiry, claims `{ sub, sid, exp, iat }` where `sid` is the `sessions.id`.
 
 ### Errors
 A single error envelope across the surface:
@@ -182,30 +182,30 @@ A single error envelope across the surface:
 Three messages, sent through Resend's REST API. Markdown-style copy below; HTML versions get the same content with the app's paper aesthetic in inline styles.
 
 ### 5.1 Verification — initial registration
-Subject: **Verify your OLL Practice email**
+Subject: **Verify your Quiet Cube email**
 
 Body:
-> Welcome to OLL Practice.
+> Welcome to Quiet Cube.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. If you didn't sign up, you can ignore this email.
 
 ### 5.2 Verification — email change
-Subject: **Confirm your new OLL Practice email**
+Subject: **Confirm your new Quiet Cube email**
 
 Body:
-> You requested to change the email on your OLL Practice account to **{new_email}**.
+> You requested to change the email on your Quiet Cube account to **{new_email}**.
 >
 > Your 6-digit verification code is: **`{code}`**
 >
 > This code expires in 10 minutes. Until you confirm, sign-in will continue to work with your previous email.
 
 ### 5.3 Password reset
-Subject: **Reset your OLL Practice password**
+Subject: **Reset your Quiet Cube password**
 
 Body:
-> Someone requested a password reset for your OLL Practice account.
+> Someone requested a password reset for your Quiet Cube account.
 >
 > Your 6-digit reset code is: **`{code}`**
 >
@@ -307,7 +307,7 @@ JWT_SECRET            # 256-bit random
 RECAPTCHA_SECRET_KEY  # Google reCAPTCHA v3 secret
 RECAPTCHA_MIN_SCORE   # default 0.5
 RESEND_API_KEY        # Resend API key
-EMAIL_FROM            # verified sender, e.g. "OLL Practice <noreply@ollpractice.app>"
+EMAIL_FROM            # verified sender, e.g. "Quiet Cube <noreply@mail.nebulouscode.com>"
 FRONTEND_URL          # CORS allowlist + email link generation
 RUST_LOG              # default "info,oll=debug"
 ARGON2_M_KIB          # default 19456
@@ -368,7 +368,7 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - [ ] **B6.** Resend client wrapper (REST via `reqwest`); email-template module with the three §5 templates; integration test against Resend in dev. Depends on B1, A2.
 - [ ] **B7.** reCAPTCHA verifier (POST to Google `siteverify`, score check). Depends on B1, A3.
 - [ ] **B8.** Generic error envelope, `AppError` enum (`thiserror`), validation helper using the `validator` crate. Depends on B1.
-- [ ] **B9.** In-process rate limiter (tower-http or custom Tower middleware) keyed by IP and by user. Depends on B1.
+- [x] **B9.** In-process rate limiter (tower-http or custom Tower middleware) keyed by IP and by user. Depends on B1.
 
 ### Backend endpoints
 - [ ] **C1.** `POST /auth/register` — depends on B3, B4, B6, B7, B8, B9. Integration tests cover happy path, validation, dup email, captcha failure, rate limit.
@@ -396,7 +396,7 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - [ ] **D11.** Settings — Security section (change password, sign out, sign out everywhere). Depends on D3, C6, C7.
 - [ ] **D12.** Email-change pending banner in the layout shell. Depends on D4, D8.
 - [ ] **D13.** Placeholder dashboard at `/`. Single short copy line — "more app coming in milestone 2." Depends on D4.
-- [ ] **D14.** Placeholder static pages: `/about`, `/terms`, `/privacy`. Real content per `TODO.md`. Depends on D4.
+- [x] **D14.** Placeholder static pages: `/about`, `/terms`, `/privacy`, `/acknowledgements`. Real content per `TODO.md`. Depends on D4.
 
 ### Verification
 - [ ] **E1.** Walk the §10 checklist on the deployed instance. Update `outstanding_decisions_auth.md` and `TODO.md` with anything that surfaces.
@@ -410,3 +410,20 @@ Listed in dependency-friendly order. Each item is sized as a single PR or short 
 - If we decide later to flip rate-limiter implementation to Redis-backed, the in-process version (B9) stays as a fallback / dev-mode default.
 - §10 is the first source of truth for what "M1 closed" means. If the user disagrees with anything there, it's the easiest place to amend.
  
+
+---
+
+## 13. Looking back
+
+A retrospective pass added after the milestone shipped. Fill in honestly —
+the value of these notes is the friction they capture, not a victory lap.
+
+- **What I'd do differently if I started this milestone today:**
+
+- **Surprises during execution:**
+
+- **Decisions that turned out to matter more than expected:**
+
+- **Decisions that turned out not to matter:**
+
+- **What this milestone taught me that I'd carry into future work:**

@@ -1,0 +1,178 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+import AppShell from '../components/AppShell.vue'
+import AboutView from '../views/AboutView.vue'
+import AcknowledgementsView from '../views/AcknowledgementsView.vue'
+import CaseDetailView from '../views/CaseDetailView.vue'
+import CasesView from '../views/CasesView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import FreeStudyView from '../views/FreeStudyView.vue'
+import GuestUpgradeScreen from '../views/GuestUpgradeScreen.vue'
+import LandingView from '../views/LandingView.vue'
+import LoginView from '../views/LoginView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
+import OnboardingView from '../views/OnboardingView.vue'
+import PracticeView from '../views/PracticeView.vue'
+import PrivacyView from '../views/PrivacyView.vue'
+import ProgressView from '../views/ProgressView.vue'
+import RegisterView from '../views/RegisterView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
+import SettingsView from '../views/SettingsView.vue'
+import StudySessionView from '../views/StudySessionView.vue'
+import TermsView from '../views/TermsView.vue'
+import VerifyEmailView from '../views/VerifyEmailView.vue'
+import { useAuthStore } from '../stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /// Route is only reachable when authenticated; unauthed visitors are
+    /// redirected to /login?next=<original>.
+    requiresAuth?: boolean
+    /// Route is only reachable when unauthenticated; authed visitors are
+    /// bounced back to / (or `?next=`).
+    guestOnly?: boolean
+  }
+}
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    // Public landing page. Authed visitors hitting `/` are bounced to
+    // /practice by the beforeEach guard below.
+    { path: '/', name: 'landing', component: LandingView },
+
+    // Tabbed app shell — Practice (default) / Cases / Progress. The shell
+    // mounts at /practice so `/` can be the public landing page; the Cases
+    // and Progress children use absolute paths to keep their URLs stable.
+    // Auth-required at the shell level; checked via `to.matched.some()` in
+    // the guard.
+    {
+      path: '/practice',
+      component: AppShell,
+      meta: { requiresAuth: true },
+      children: [
+        { path: '', name: 'practice', component: PracticeView },
+        { path: '/cases', name: 'cases', component: CasesView },
+        { path: '/progress', name: 'progress', component: ProgressView },
+      ],
+    },
+
+    // Onboarding stub — first-run only, triggered by VerifyEmailView's
+    // success handler when has_seen_onboarding is false.
+    {
+      path: '/welcome',
+      name: 'welcome',
+      component: OnboardingView,
+      meta: { requiresAuth: true },
+    },
+
+    // Guest upgrade — registration variant that ships the localStorage
+    // blob so the backend imports it. Reachable from the guest banner
+    // and Settings while in guest mode.
+    {
+      path: '/upgrade',
+      name: 'upgrade',
+      component: GuestUpgradeScreen,
+    },
+    // Settings is full-bleed — no tab bar, has its own back button.
+    { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
+
+    // Study session is full-bleed — full attention on the card.
+    { path: '/study', name: 'study', component: StudySessionView, meta: { requiresAuth: true } },
+
+    // Free-study setup — full-bleed filter screen, no tab bar.
+    {
+      path: '/free-study',
+      name: 'free-study',
+      component: FreeStudyView,
+      meta: { requiresAuth: true },
+    },
+
+    // Case detail is also full-bleed (per outstanding_decision.md §1.5) so
+    // the user can focus on the algorithm + result preview without the tab
+    // bar in the way.
+    {
+      path: '/cases/:id',
+      name: 'case-detail',
+      component: CaseDetailView,
+      meta: { requiresAuth: true },
+    },
+
+    // Auth views.
+    { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
+      meta: { guestOnly: true },
+    },
+    // Verify-email is reachable from both states: post-registration (no session yet)
+    // and during an email change (session present). No meta — the view handles both.
+    { path: '/verify-email', name: 'verify-email', component: VerifyEmailView },
+
+    // Public static pages — placeholder content until launch.
+    { path: '/about', name: 'about', component: AboutView },
+    { path: '/terms', name: 'terms', component: TermsView },
+    { path: '/privacy', name: 'privacy', component: PrivacyView },
+    {
+      path: '/acknowledgements',
+      name: 'acknowledgements',
+      component: AcknowledgementsView,
+    },
+
+    // Catch-all 404 — public so deep-linked typos render a real "Not found"
+    // page instead of redirecting silently. The view itself reads
+    // authStore.status to pick the right CTA.
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
+  ],
+})
+
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  // Wait for the initial /auth/me round-trip before applying any guard logic.
+  // bootstrap() is idempotent — same promise is reused after the first call.
+  await auth.bootstrap()
+
+  // Authed and guest users alike hitting the public landing get bounced to
+  // their dashboard. Only fully-anon visitors stay on `/`.
+  if (to.path === '/' && (auth.isAuthed || auth.isGuest)) {
+    return '/practice'
+  }
+
+  // Walk matched records so parent route's requiresAuth applies to children.
+  // M6 admits guest-mode users to the dashboard surfaces (Practice / Cases /
+  // Progress / Free Study / Study / Welcome / Settings) — only `'anon'`
+  // truly needs to be bounced to /login.
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+  if (requiresAuth && auth.isAnon) {
+    return { path: '/login', query: { next: to.fullPath } }
+  }
+
+  // Guest entering /welcome before completing onboarding is fine; if a
+  // guest already completed onboarding, send them on to /practice rather
+  // than re-running the stub.
+  if (to.path === '/welcome' && auth.isGuest && auth.guestState?.onboarding_completed) {
+    return '/practice'
+  }
+
+  if (to.meta.guestOnly && auth.isAuthed) {
+    const nextRaw = to.query.next
+    const next =
+      typeof nextRaw === 'string' && nextRaw.startsWith('/') ? nextRaw : '/practice'
+    return next
+  }
+})
+
+export default router
