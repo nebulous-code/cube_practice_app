@@ -18,13 +18,13 @@ Linear, top-to-bottom. Don't skip ahead — several steps assume earlier ones al
 
 Land these on dev so they ride into main with the merge. None of them affect the running dev environment.
 
-- [ ] Update `README.md`: replace `cube.nebulouscode.com` (×2) with `quiet-cube.com`.
-- [ ] Update `docs/ARCHITECTURE.md`: replace `cube.nebulouscode.com` (×2) with `quiet-cube.com`.
-- [ ] Update `backend/.env.example`: change the `# Production: …` comment for `FRONTEND_URL` to `https://quiet-cube.com`.
-- [ ] Update `frontend/.env.example`: change the `# Production: …` comment for `VITE_API_BASE_URL` to `https://api.quiet-cube.com`.
-- [ ] Update `.claude/settings.local.json`: swap the curl allow-list entry from `api.cube.nebulouscode.com` to `api.quiet-cube.com`.
-- [ ] Decide: `docs/CHANGELOG.md` mentions `cube.nebulouscode.com` (×2). Leave as historical record OR update — your call. Milestone docs under `docs/milestones/*` and `docs/MVP_QA_CHECKLIST.md` are historical; leave them.
-- [ ] `cargo test` + `npm run type-check` pass.
+- [x] Update `README.md`: replace `cube.nebulouscode.com` (×2) with `quiet-cube.com`.
+- [x] Update `docs/ARCHITECTURE.md`: replace `cube.nebulouscode.com` (×2) with `quiet-cube.com`.
+- [x] Update `backend/.env.example`: change the `# Production: …` comment for `FRONTEND_URL` to `https://quiet-cube.com`.
+- [x] Update `frontend/.env.example`: change the `# Production: …` comment for `VITE_API_BASE_URL` to `https://api.quiet-cube.com`.
+- [x] Update `.claude/settings.local.json`: swap the curl allow-list entry from `api.cube.nebulouscode.com` to `api.quiet-cube.com`.
+- [x] Decide: `docs/CHANGELOG.md` mentions `cube.nebulouscode.com` (×2). Leave as historical record OR update — your call. Milestone docs under `docs/milestones/*` and `docs/MVP_QA_CHECKLIST.md` are historical; leave them.
+- [x] `cargo test` + `npm run type-check` pass.
 - [ ] Commit + push to `dev`.
 
 ---
@@ -33,17 +33,17 @@ Land these on dev so they ride into main with the merge. None of them affect the
 
 Render bills custom domains per slot. Removing the dev domains before adding the prod ones lets you reuse the same credits instead of paying for both at once. After this phase, dev runs on bare `*.onrender.com` URLs. Dev auth will be cross-site cookies (won't carry), but production hasn't started yet so this is fine — dev is in the same cleanup-state Phase 9 was always going to leave it in.
 
-- [ ] In Render → dev frontend service → Custom Domains: remove `cube.nebulouscode.com`.
-- [ ] In Render → dev backend service → Custom Domains: remove `api.cube.nebulouscode.com`.
-- [ ] At the registrar / DNS host: leave the existing CNAME records pointing at the (now-empty) Render dev services. We'll repoint them in Phase 8 to redirect to quiet-cube.com.
-- [ ] Confirm both Render services now show only their bare `*.onrender.com` URL.
+- [x] In Render → dev frontend service → Custom Domains: remove `cube.nebulouscode.com`.
+- [x] In Render → dev backend service → Custom Domains: remove `api.cube.nebulouscode.com`.
+- [x] At the registrar / DNS host: leave the existing CNAME records pointing at the (now-empty) Render dev services. We'll repoint them in Phase 8 to redirect to quiet-cube.com.
+- [x] Confirm both Render services now show only their bare `*.onrender.com` URL.
 
 ## Phase 2 — Turnstile dashboard
 
-- [ ] Open the Turnstile site in the Cloudflare dashboard.
-- [ ] Add hostnames: `quiet-cube.com`, `api.quiet-cube.com`.
-- [ ] Leave `cube.nebulouscode.com` and `localhost` in the list for now (so dev keeps working until you migrate it).
-- [ ] No code or env-var changes — site/secret keys stay the same.
+- [x] Open the Turnstile site in the Cloudflare dashboard.
+- [x] Add hostnames: `quiet-cube.com`, `api.quiet-cube.com`.
+- [x] Leave `cube.nebulouscode.com` and `localhost` in the list for now (so dev keeps working until you migrate it).
+- [x] No code or env-var changes — site/secret keys stay the same.
 
 ---
 
