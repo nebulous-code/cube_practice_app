@@ -14,22 +14,40 @@ A spaced-repetition app for Rubik's cube algorithms. Pick a case, run the algori
 
 ## Screenshots
 
-![Landing page](docs/screen_shots/landing.jpg)
+<p align="center">
+  <img src="docs/screen_shots/landing.jpg" alt="Landing page" height="500" />
+</p>
+
 *The public landing page — hero copy, value proposition, and the option to continue as a guest without creating an account.*
 
-![Practice dashboard](docs/screen_shots/practice_dashboard.jpg)
+<p align="center">
+  <img src="docs/screen_shots/practice_dashboard.jpg" alt="Practice dashboard" height="500" />
+</p>
+
 *The practice dashboard — the daily landing screen for a signed-in user, showing the standing card, due-count summary, and study streak.*
 
-![Study session](docs/screen_shots/study_session.jpg)
+<p align="center">
+  <img src="docs/screen_shots/study_session.jpg" alt="Study session" height="500" />
+</p>
+
 *A study session before reveal — the OLL pattern is shown and the user runs the algorithm on a real cube before flipping the card.*
 
-![Study session revealed](docs/screen_shots/study_session_revealed.jpg)
+<p align="center">
+  <img src="docs/screen_shots/study_session_revealed.jpg" alt="Study session revealed" height="500" />
+</p>
+
 *The same session after reveal — the algorithm is visible alongside the expected result pattern, with the Fail / Hard / Good / Easy grading row underneath.*
 
-![Cases browser](docs/screen_shots/cases_browser.jpg)
+<p align="center">
+  <img src="docs/screen_shots/cases_browser.jpg" alt="Cases browser" height="500" />
+</p>
+
 *The cases browser with filter chips active — primary-shape and state filters narrowing the list of all 57 OLL cases.*
 
-![Progress view](docs/screen_shots/progress.jpg)
+<p align="center">
+  <img src="docs/screen_shots/progress.jpg" alt="Progress view" height="500" />
+</p>
+
 *The progress view — the case-state distribution across not-started, learning, due, and mastered.*
 
 ## Repo layout
