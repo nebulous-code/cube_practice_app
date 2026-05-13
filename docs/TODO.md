@@ -24,7 +24,6 @@ Things that need a human decision, content, design, or external action — items
 ## Optional for MVP
 
 - [x] **Acknowledgements page real content.** Currently placeholder. Post-MVP can auto-generate from `package.json` / `Cargo.toml` license metadata.
-- [ ]  **Remove API URL Redirect** Render charges per url redirect. we're using two api.cube.neb... and cube.neb... we could live without api.cube.neb... and just point to api-cube.onrender.com. 
 
 ## Known bugs
 

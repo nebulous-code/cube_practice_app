@@ -8,32 +8,29 @@
 
 A spaced-repetition app for Rubik's cube algorithms. Pick a case, run the algorithm, grade yourself, and let the scheduler bring it back when you're about to forget it.
 
-**Live at [cube.nebulouscode.com](https://cube.nebulouscode.com)** · **Status:** MVP feature-complete; final pre-launch pass in progress.
+**Live at [quiet-cube.com](https://quiet-cube.com)** · **Status:** MVP feature-complete; final pre-launch pass in progress.
 
 **Stack:** Rust + Axum + sqlx (backend), Vue 3 + Vite + TypeScript (frontend), Postgres on Neon, deployed on Render.
 
 ## Screenshots
 
-<!--
-Screenshots live in docs/screen_shots/. Drop PNGs at the paths below with
-the suggested filenames and they'll render here. Recommended viewport for
-captures: 1280×800 desktop or 390×844 mobile.
--->
+![Landing page](docs/screen_shots/landing.jpg)
+*The public landing page — hero copy, value proposition, and the option to continue as a guest without creating an account.*
 
-![Landing page](docs/screen_shots/landing.png)
-*Landing page — first impression for a cold visitor. Should show the hero, the value prop, and the call-to-action that lets someone try guest mode without signing up.*
+![Practice dashboard](docs/screen_shots/practice_dashboard.jpg)
+*The practice dashboard — the daily landing screen for a signed-in user, showing the standing card, due-count summary, and study streak.*
 
-![Practice dashboard](docs/screen_shots/practice_dashboard.png)
-*Practice dashboard — the daily landing screen for a signed-in user. Capture this with a few cards already due so the standing card, due count, and study streak chip are all visible.*
+![Study session](docs/screen_shots/study_session.jpg)
+*A study session before reveal — the OLL pattern is shown and the user runs the algorithm on a real cube before flipping the card.*
 
-![Study session](docs/screen_shots/study_session_revealed.png)
-*A study session mid-reveal — capture the pattern diagram, the algorithm, and the 4-button (Fail / Hard / Good / Easy) grading row. This is the core feature of the app, so it's the most important shot.*
+![Study session revealed](docs/screen_shots/study_session_revealed.jpg)
+*The same session after reveal — the algorithm is visible alongside the expected result pattern, with the Fail / Hard / Good / Easy grading row underneath.*
 
-![Cases browser](docs/screen_shots/cases_browser.png)
-*Cases browser with filter chips active — capture with a primary-shape filter and at least one state chip selected so the filter UI is doing visible work, not sitting empty.*
+![Cases browser](docs/screen_shots/cases_browser.jpg)
+*The cases browser with filter chips active — primary-shape and state filters narrowing the list of all 57 OLL cases.*
 
-![Progress view](docs/screen_shots/progress.png)
-*Progress view — the case-state breakdown (not-started / learning / due / mastered). Capture an account with enough practice history to show non-trivial distribution across all four states.*
+![Progress view](docs/screen_shots/progress.jpg)
+*The progress view — the case-state distribution across not-started, learning, due, and mastered.*
 
 ## Repo layout
 
@@ -113,6 +110,6 @@ npm run build
 
 ## License
 
-Source-available under the **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE) for the full text. In short: anyone may read, run, modify, and contribute to this code for any noncommercial purpose. Commercial use of the code itself (including standing up a competing hosted version for resale) is reserved to the maintainer. The hosted service at cube.nebulouscode.com is governed separately by the [Terms of Service](docs/policies/terms_of_service.md).
+Source-available under the **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE) for the full text. In short: anyone may read, run, modify, and contribute to this code for any noncommercial purpose. Commercial use of the code itself (including standing up a competing hosted version for resale) is reserved to the maintainer. The hosted service at quiet-cube.com is governed separately by the [Terms of Service](docs/policies/terms_of_service.md).
 
 Forks and pull requests are welcome but not expected given the license. If you do open one, you grant the maintainer the right to relicense your contribution under any future license.

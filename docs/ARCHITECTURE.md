@@ -2,7 +2,7 @@
 
 The live reference for how Quiet Cube is built today. This doc tracks
 the system as it actually runs in production at
-[cube.nebulouscode.com](https://cube.nebulouscode.com), not the original
+[quiet-cube.com](https://quiet-cube.com), not the original
 spec — that lives in
 [`milestones/00_initial_design_doc.md`](milestones/00_initial_design_doc.md)
 as a historical artifact. When code changes shape, this doc changes with
@@ -432,7 +432,7 @@ changes.
 ### Services
 
 - **Frontend** — Vue build output served as a Render static site at
-  `cube.nebulouscode.com`.
+  `quiet-cube.com`.
 - **Backend** — Rust binary (Axum) on a Render web service, currently
   free tier (so cold starts after ~15 min idle — see Post-MVP "Cold-start
   UX safety net").
