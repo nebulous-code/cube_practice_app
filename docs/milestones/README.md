@@ -150,6 +150,24 @@ A high-level split of the MVP into testable, shippable phases. Each milestone le
 
 ---
 
+## Milestone 8 — Operator Stats
+
+**Goal:** A weekly email digest tells the operator whether the user base is growing, shrinking, or flat — replacing the "Admin panel" idea from Post-MVP with something dramatically cheaper to build and maintain.
+
+**Done when:**
+- A scheduled GitHub Action (`workflow_dispatch`-triggerable too) runs weekly against prod Neon via a `SELECT`-only role and emails a digest to the operator inbox
+- The digest is stateless: every figure is computed from `users.created_at` and `account_deletions.deleted_at` at query time. No history file, no extra tables, no commits from the workflow
+- Workflow logs are aggregate-only — no emails, no user IDs, no PII
+- Failures fire GitHub's workflow-failure notification email as a dead-man switch
+
+**Backend:** No app-code changes. One manual Postgres role provisioning step (`stats_readonly` with column-level `SELECT` grants on `users` and `account_deletions`).
+
+**Frontend:** —
+
+**Out of scope:** Sparklines / multi-week history beyond N=1 (requires state file). Active-users metric (requires a `last_seen_at` column not yet on `users`). Discord/Slack delivery. A full admin UI.
+
+---
+
 ## Parallelization opportunities
 
 The milestones above are listed in the natural completion order, but some work can run in parallel without breaking the "always green" rule:

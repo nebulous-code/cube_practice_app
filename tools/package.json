@@ -1,0 +1,12 @@
+{
+  "name": "quiet-cube-tools",
+  "private": true,
+  "type": "module",
+  "description": "Operator tooling for Quiet Cube. See docs/milestones/08_operator_stats.md.",
+  "scripts": {
+    "stats": "node operator_stats.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

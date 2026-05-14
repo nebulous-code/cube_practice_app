@@ -19,6 +19,8 @@ Each entry is "what + why-it's-deferred + rough shape if obvious." Nothing here 
 - FAQ page (very low priority).
 - Full accessibility audit — screen-reader walkthrough, ARIA live regions, complete WCAG AA review. M5 ships a basic pass: keyboard nav, focus rings, form labels, spot-check contrast.
 - **Avatar.** Allow users to pick an OLL case as their avatar in the style of the logo.
+- Name fallback
+    - Right now the cases screen shows unnamed if the user hasn't put in a name. I'd like it to fallback to Case # if there is no nickname. This should apply to all UI elements that have the option to display the nickname. On the edit screen it should remain unnamed.
 
 ## Study mechanics
 

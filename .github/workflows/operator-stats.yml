@@ -1,0 +1,58 @@
+# Weekly operator-stats digest. See docs/milestones/08_operator_stats.md.
+#
+# Reads a read-only Neon role, emails the digest via Resend, and commits
+# an appended `tools/operator_stats_history.json` back to `main`. Runs in
+# the `production` GitHub environment so its three secrets are scoped and
+# branch-restricted (only resolves from main).
+
+name: operator-stats
+
+on:
+  schedule:
+    # Monday 13:00 UTC = 9 AM ET = 6 AM PT.
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: operator-stats
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tools dependencies
+        working-directory: tools
+        run: npm install --no-audit --no-fund
+
+      - name: Run operator stats
+        working-directory: tools
+        env:
+          STATS_DATABASE_URL: ${{ secrets.STATS_DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OPERATOR_EMAIL: ${{ secrets.OPERATOR_EMAIL }}
+        run: node operator_stats.js
+
+      - name: Commit updated history
+        run: |
+          if git diff --quiet tools/operator_stats_history.json; then
+            echo "No history changes to commit."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/operator_stats_history.json
+          git commit -m "stats: $(date -u +%Y-%m-%d) [skip ci]"
+          git push
